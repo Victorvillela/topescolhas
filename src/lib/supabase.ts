@@ -1,12 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
 
-// Client-side Supabase (usar em componentes)
+// Client-side Supabase
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Server-side Supabase (usar em API routes)
+// Server-side Supabase
 export function createServerClient() {
   return createClient(
     supabaseUrl,
@@ -14,9 +14,7 @@ export function createServerClient() {
   )
 }
 
-// ============================================
-// TIPOS DO BANCO DE DADOS
-// ============================================
+// Tipos do banco de dados
 export interface DbUser {
   id: string
   email: string

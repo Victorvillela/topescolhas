@@ -1,6 +1,6 @@
 // Busca resultados de loterias de várias fontes
-// Brasileiras: API da Caixa (gratuita)
-// Internacionais: APIs públicas + fallback
+// Brasileiras: APIs alternativas (funciona fora do BR)
+// Internacionais: APIs públicas
 
 export interface LotteryResult {
   slug: string
@@ -8,7 +8,7 @@ export interface LotteryResult {
   country: string
   numbers: number[]
   extras: number[]
-  date: string           // ISO date
+  date: string
   prize: string
   concurso: string
   nextPrize?: string
@@ -16,140 +16,183 @@ export interface LotteryResult {
 }
 
 // ============================================
-// LOTERIAS BRASILEIRAS - API da Caixa
+// LOTERIAS BRASILEIRAS
 // ============================================
 
 const CAIXA_LOTTERIES = [
-  { slug: 'mega-sena', api: 'megasena', name: 'Mega-Sena', country: 'Brasil' },
+  { slug: 'mega-sena', api: 'mega-sena', name: 'Mega-Sena', country: 'Brasil' },
   { slug: 'lotofacil', api: 'lotofacil', name: 'Lotofácil', country: 'Brasil' },
   { slug: 'quina', api: 'quina', name: 'Quina', country: 'Brasil' },
   { slug: 'lotomania', api: 'lotomania', name: 'Lotomania', country: 'Brasil' },
   { slug: 'timemania', api: 'timemania', name: 'Timemania', country: 'Brasil' },
-  { slug: 'dupla-sena', api: 'duplasena', name: 'Dupla Sena', country: 'Brasil' },
-  { slug: 'dia-de-sorte', api: 'diadesorte', name: 'Dia de Sorte', country: 'Brasil' },
+  { slug: 'dupla-sena', api: 'dupla-sena', name: 'Dupla Sena', country: 'Brasil' },
+  { slug: 'dia-de-sorte', api: 'dia-de-sorte', name: 'Dia de Sorte', country: 'Brasil' },
 ]
 
-async function fetchCaixaLottery(apiName: string): Promise<any> {
+// Fonte 1: loteriascaixa.com (funciona globalmente)
+async function fetchFromLoteriascaixa(apiName: string): Promise<any> {
   try {
     const res = await fetch(
-      `https://servicebus2.caixa.gov.br/portaldeloterias/api/${apiName}/`,
+      `https://loteriascaixa.com/api/v2/${apiName}/latest`,
       {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
         next: { revalidate: 0 },
       }
     )
-    if (!res.ok) throw new Error(`Caixa API ${apiName}: ${res.status}`)
-    return await res.json()
+    if (res.ok) return await res.json()
   } catch (err) {
-    console.error(`Erro ao buscar ${apiName}:`, err)
-    return null
+    // silencioso
   }
+  return null
 }
 
-function parseCaixaResult(slug: string, name: string, country: string, data: any): LotteryResult | null {
+// Fonte 2: servicebus2.caixa.gov.br (pode não funcionar fora do BR)
+async function fetchFromCaixaDirecta(apiName: string): Promise<any> {
+  const apiMap: Record<string, string> = {
+    'mega-sena': 'megasena',
+    'lotofacil': 'lotofacil',
+    'quina': 'quina',
+    'lotomania': 'lotomania',
+    'timemania': 'timemania',
+    'dupla-sena': 'duplasena',
+    'dia-de-sorte': 'diadesorte',
+  }
+  try {
+    const res = await fetch(
+      `https://servicebus2.caixa.gov.br/portaldeloterias/api/${apiMap[apiName]}/`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://loterias.caixa.gov.br/',
+          'Origin': 'https://loterias.caixa.gov.br',
+        },
+        next: { revalidate: 0 },
+      }
+    )
+    if (res.ok) return await res.json()
+  } catch (err) {
+    // silencioso
+  }
+  return null
+}
+
+// Fonte 3: API aberta do GitHub (loteriascaixa-api)
+async function fetchFromGithubAPI(apiName: string): Promise<any> {
+  try {
+    const res = await fetch(
+      `https://loteriascaixa-api.herokuapp.com/api/${apiName}/latest`,
+      {
+        headers: { 'Accept': 'application/json' },
+        next: { revalidate: 0 },
+      }
+    )
+    if (res.ok) return await res.json()
+  } catch (err) {
+    // silencioso
+  }
+  return null
+}
+
+// Tenta múltiplas fontes
+async function fetchBrazilianLottery(lot: typeof CAIXA_LOTTERIES[0]): Promise<LotteryResult | null> {
+  // Tenta fonte 1
+  let data = await fetchFromLoteriascaixa(lot.api)
+
+  // Tenta fonte 2
+  if (!data) {
+    data = await fetchFromCaixaDirecta(lot.api)
+  }
+
+  // Tenta fonte 3
+  if (!data) {
+    data = await fetchFromGithubAPI(lot.api)
+  }
+
   if (!data) return null
 
+  return parseBrazilianResult(lot.slug, lot.name, data)
+}
+
+function parseBrazilianResult(slug: string, name: string, data: any): LotteryResult | null {
   try {
-    // A API da Caixa retorna formatos ligeiramente diferentes
     let numbers: number[] = []
     let extras: number[] = []
     let date = ''
     let prize = ''
     let concurso = ''
     let nextPrize = ''
-    let nextDate = ''
 
-    // Número do concurso
-    concurso = String(data.numero || data.numeroConcurso || '')
+    // Concurso
+    concurso = String(data.numero || data.numeroConcurso || data.concurso || '')
 
-    // Data do sorteio
+    // Data - aceita vários formatos
     if (data.dataApuracao) {
-      // Formato: "dd/mm/yyyy"
-      const parts = data.dataApuracao.split('/')
-      if (parts.length === 3) {
-        date = `${parts[2]}-${parts[1]}-${parts[0]}`
-      }
+      date = parseDateBR(data.dataApuracao)
+    } else if (data.data) {
+      date = parseDateBR(data.data)
+    } else if (data.date) {
+      date = data.date
     }
 
-    // Dezenas sorteadas
+    // Dezenas
     if (data.listaDezenas) {
       numbers = data.listaDezenas.map((d: string) => parseInt(d))
+    } else if (data.dezenas) {
+      numbers = (Array.isArray(data.dezenas) ? data.dezenas : []).map((d: any) => parseInt(String(d)))
     } else if (data.dezenasSorteadasOrdemSorteio) {
       numbers = data.dezenasSorteadasOrdemSorteio.map((d: string) => parseInt(d))
     }
 
-    // Prêmio principal
+    // Prêmio
     if (data.listaRateioPremio && data.listaRateioPremio.length > 0) {
-      const mainPrize = data.listaRateioPremio[0]
-      if (mainPrize.valorPremio > 0) {
-        prize = `R$ ${formatBRL(mainPrize.valorPremio)}`
-      } else {
-        prize = 'Acumulou!'
-      }
+      const p = data.listaRateioPremio[0]
+      prize = p.valorPremio > 0 ? `R$ ${formatNum(p.valorPremio)}` : 'Acumulou!'
+    } else if (data.valorAcumulado !== undefined) {
+      prize = data.valorAcumulado > 0 ? `R$ ${formatNum(data.valorAcumulado)}` : 'R$ —'
+    } else if (data.premiacoes && data.premiacoes.length > 0) {
+      const p = data.premiacoes[0]
+      prize = p.premio ? `R$ ${formatNum(p.premio)}` : 'Acumulou!'
     }
 
-    // Valor acumulado / próximo prêmio
+    // Próximo
     if (data.valorAcumuladoProximoConcurso) {
-      nextPrize = `R$ ${formatBRL(data.valorAcumuladoProximoConcurso)}`
+      nextPrize = `R$ ${formatNum(data.valorAcumuladoProximoConcurso)}`
     } else if (data.valorEstimadoProximoConcurso) {
-      nextPrize = `R$ ${formatBRL(data.valorEstimadoProximoConcurso)}`
-    }
-
-    // Data do próximo concurso
-    if (data.dataProximoConcurso) {
-      const parts = data.dataProximoConcurso.split('/')
-      if (parts.length === 3) {
-        nextDate = `${parts[2]}-${parts[1]}-${parts[0]}`
-      }
-    }
-
-    // Casos especiais
-    if (slug === 'dupla-sena' && data.listaDezenasSegundoSorteio) {
-      // Dupla Sena tem 2 sorteios, usamos o primeiro
-    }
-
-    if (slug === 'dia-de-sorte' && data.nomeTimeCoracaoMesSorte) {
-      // Mês da sorte é um extra especial
+      nextPrize = `R$ ${formatNum(data.valorEstimadoProximoConcurso)}`
     }
 
     if (numbers.length === 0) return null
-
     numbers.sort((a, b) => a - b)
 
     return {
       slug,
       name,
-      country,
+      country: 'Brasil',
       numbers,
       extras,
       date,
-      prize: prize || 'Acumulou!',
+      prize: prize || '—',
       concurso,
       nextPrize,
-      nextDate,
     }
   } catch (err) {
-    console.error(`Erro ao parsear ${slug}:`, err)
+    console.error(`Erro parse ${slug}:`, err)
     return null
   }
 }
 
-function formatBRL(value: number): string {
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
 // ============================================
-// LOTERIAS INTERNACIONAIS
+// LOTERIAS AMERICANAS - NY Open Data (gratuita)
 // ============================================
 
-// Powerball & Mega Millions - powerball.com / megamillions.com
 async function fetchUSLotteries(): Promise<LotteryResult[]> {
   const results: LotteryResult[] = []
 
-  // Powerball - via API pública
+  // Powerball
   try {
     const res = await fetch(
       'https://data.ny.gov/resource/d6yy-54nr.json?$order=draw_date%20DESC&$limit=1',
@@ -160,17 +203,14 @@ async function fetchUSLotteries(): Promise<LotteryResult[]> {
       if (data.length > 0) {
         const d = data[0]
         const nums = d.winning_numbers.split(' ').map((n: string) => parseInt(n))
-        const mainNums = nums.slice(0, 5).sort((a: number, b: number) => a - b)
-        const powerball = nums[5] ? [nums[5]] : []
-
         results.push({
           slug: 'powerball',
           name: 'Powerball',
           country: 'E.U.A.',
-          numbers: mainNums,
-          extras: powerball,
+          numbers: nums.slice(0, 5).sort((a: number, b: number) => a - b),
+          extras: nums[5] ? [nums[5]] : [],
           date: d.draw_date?.split('T')[0] || '',
-          prize: d.multiplier ? `US$ ${d.multiplier}x` : 'US$ —',
+          prize: `US$ ${d.multiplier || '—'}`,
           concurso: '',
         })
       }
@@ -179,7 +219,7 @@ async function fetchUSLotteries(): Promise<LotteryResult[]> {
     console.error('Erro Powerball:', err)
   }
 
-  // Mega Millions - via API pública
+  // Mega Millions
   try {
     const res = await fetch(
       'https://data.ny.gov/resource/5xaw-6ayf.json?$order=draw_date%20DESC&$limit=1',
@@ -190,17 +230,14 @@ async function fetchUSLotteries(): Promise<LotteryResult[]> {
       if (data.length > 0) {
         const d = data[0]
         const nums = d.winning_numbers.split(' ').map((n: string) => parseInt(n))
-        const mainNums = nums.slice(0, 5).sort((a: number, b: number) => a - b)
-        const megaBall = nums[5] ? [nums[5]] : []
-
         results.push({
           slug: 'mega-millions',
           name: 'Mega Millions',
           country: 'E.U.A.',
-          numbers: mainNums,
-          extras: megaBall,
+          numbers: nums.slice(0, 5).sort((a: number, b: number) => a - b),
+          extras: nums[5] ? [nums[5]] : [],
           date: d.draw_date?.split('T')[0] || '',
-          prize: d.multiplier ? `US$ ${d.multiplier}x` : 'US$ —',
+          prize: `US$ ${d.multiplier || '—'}`,
           concurso: '',
         })
       }
@@ -212,11 +249,14 @@ async function fetchUSLotteries(): Promise<LotteryResult[]> {
   return results
 }
 
-// EuroMillions, EuroJackpot, etc. - via API pública
+// ============================================
+// LOTERIAS EUROPEIAS
+// ============================================
+
 async function fetchEuropeanLotteries(): Promise<LotteryResult[]> {
   const results: LotteryResult[] = []
 
-  // EuroMillions
+  // EuroMillions - via API
   try {
     const res = await fetch(
       'https://www.euro-millions.com/api/result',
@@ -232,8 +272,8 @@ async function fetchEuropeanLotteries(): Promise<LotteryResult[]> {
           slug: 'euromilhoes',
           name: 'EuroMilhões',
           country: 'Europa',
-          numbers: data.numbers || [],
-          extras: data.stars || data.luckyStars || [],
+          numbers: (data.numbers || []).map((n: any) => parseInt(n)),
+          extras: (data.stars || data.luckyStars || []).map((n: any) => parseInt(n)),
           date: data.date || '',
           prize: data.jackpot || '€ —',
           concurso: '',
@@ -248,76 +288,99 @@ async function fetchEuropeanLotteries(): Promise<LotteryResult[]> {
 }
 
 // ============================================
-// BUSCAR TODOS OS RESULTADOS
+// BUSCAR TODOS
 // ============================================
 
 export async function fetchAllResults(): Promise<LotteryResult[]> {
   const results: LotteryResult[] = []
   const errors: string[] = []
 
-  // 1. Loterias Brasileiras (paralelo)
+  // 1. Brasileiras (paralelo com timeout)
   console.log('🇧🇷 Buscando loterias brasileiras...')
-  const caixaPromises = CAIXA_LOTTERIES.map(async (lot) => {
-    const data = await fetchCaixaLottery(lot.api)
-    const result = parseCaixaResult(lot.slug, lot.name, lot.country, data)
-    if (result) {
-      results.push(result)
-      console.log(`  ✅ ${lot.name}: concurso ${result.concurso}`)
-    } else {
+  const brPromises = CAIXA_LOTTERIES.map(async (lot) => {
+    try {
+      const result = await Promise.race([
+        fetchBrazilianLottery(lot),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)), // 10s timeout
+      ])
+      if (result) {
+        results.push(result)
+        console.log(`  ✅ ${lot.name}: #${result.concurso}`)
+      } else {
+        errors.push(lot.name)
+        console.log(`  ❌ ${lot.name}: sem dados`)
+      }
+    } catch (err) {
       errors.push(lot.name)
-      console.log(`  ❌ ${lot.name}: sem dados`)
+      console.log(`  ❌ ${lot.name}: erro`)
     }
   })
-  await Promise.all(caixaPromises)
+  await Promise.all(brPromises)
 
-  // 2. Loterias Americanas
+  // 2. Americanas
   console.log('🇺🇸 Buscando loterias americanas...')
   try {
     const usResults = await fetchUSLotteries()
     results.push(...usResults)
     usResults.forEach(r => console.log(`  ✅ ${r.name}: ${r.date}`))
   } catch (err) {
-    console.error('  ❌ Erro loterias US:', err)
+    console.error('  ❌ Erro US:', err)
   }
 
-  // 3. Loterias Europeias
+  // 3. Europeias
   console.log('🇪🇺 Buscando loterias europeias...')
   try {
     const euResults = await fetchEuropeanLotteries()
     results.push(...euResults)
     euResults.forEach(r => console.log(`  ✅ ${r.name}: ${r.date}`))
   } catch (err) {
-    console.error('  ❌ Erro loterias EU:', err)
+    console.error('  ❌ Erro EU:', err)
   }
 
-  console.log(`\n📊 Total: ${results.length} resultados obtidos`)
-  if (errors.length > 0) {
-    console.log(`⚠️ Falhas: ${errors.join(', ')}`)
-  }
+  console.log(`\n📊 Total: ${results.length} resultados`)
+  if (errors.length > 0) console.log(`⚠️ Falhas: ${errors.join(', ')}`)
 
   return results
 }
 
 // ============================================
-// BUSCAR RESULTADO ESPECÍFICO
+// BUSCAR ESPECÍFICO
 // ============================================
 
 export async function fetchResultBySlug(slug: string): Promise<LotteryResult | null> {
   const caixaLot = CAIXA_LOTTERIES.find(l => l.slug === slug)
-  if (caixaLot) {
-    const data = await fetchCaixaLottery(caixaLot.api)
-    return parseCaixaResult(caixaLot.slug, caixaLot.name, caixaLot.country, data)
-  }
+  if (caixaLot) return fetchBrazilianLottery(caixaLot)
 
   if (slug === 'powerball' || slug === 'mega-millions') {
-    const usResults = await fetchUSLotteries()
-    return usResults.find(r => r.slug === slug) || null
+    const us = await fetchUSLotteries()
+    return us.find(r => r.slug === slug) || null
   }
 
   if (slug === 'euromilhoes') {
-    const euResults = await fetchEuropeanLotteries()
-    return euResults.find(r => r.slug === slug) || null
+    const eu = await fetchEuropeanLotteries()
+    return eu.find(r => r.slug === slug) || null
   }
 
   return null
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function parseDateBR(dateStr: string): string {
+  if (!dateStr) return ''
+  // "dd/mm/yyyy" → "yyyy-mm-dd"
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/')
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
+  }
+  // Já no formato ISO
+  if (dateStr.includes('-')) return dateStr.split('T')[0]
+  return dateStr
+}
+
+function formatNum(value: number): string {
+  if (!value || isNaN(value)) return '—'
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }

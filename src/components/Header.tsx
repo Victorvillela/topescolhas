@@ -1,146 +1,459 @@
 'use client'
+
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useTranslation } from '@/contexts/LanguageContext'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
-import { ShoppingCart, User, Menu, X, LogOut, Ticket, Wallet, ChevronDown } from 'lucide-react'
+import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Header() {
+  const { t } = useTranslation()
+  const { items } = useCartStore()
+  const { user, profile, signOut } = useAuthStore()
+  const [menuOpen, setMenuOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const cartCount = useCartStore(s => s.getCount())
-  const { user, initialize, logout } = useAuthStore()
+  const [scrolled, setScrolled] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
+  // Scroll effect
   useEffect(() => {
-    setMounted(true)
-    initialize()
-  }, [initialize])
+    const handleScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
-  const navLinks = [
-    { href: '/', label: '🎰 Loterias' },
-    { href: '/resultados', label: '📊 Resultados' },
-    { href: '/como-jogar', label: '❓ Como Jogar' },
-  ]
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const cartCount = items.length
 
   return (
-    <header className="sticky top-0 z-50 bg-dark-950/95 backdrop-blur-md border-b border-white/5">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        background: scrolled ? 'rgba(10,14,26,0.95)' : 'rgba(10,14,26,0.8)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        transition: 'all 0.3s',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 24px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-lg">🎰</div>
-          <div className="leading-tight">
-            <div className="text-white font-extrabold text-sm tracking-tight">Top Escolhas</div>
-            <div className="text-orange-400 text-[10px] font-bold tracking-widest uppercase">DA NET</div>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #facc15, #f97316)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+            }}
+          >
+            🎰
+          </div>
+          <div style={{ lineHeight: 1.2 }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>Top Escolhas</div>
+            <div style={{ color: '#f97316', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+              DA NET
+            </div>
           </div>
         </Link>
 
-        {/* Nav Desktop */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href}
-              className="px-4 py-2 text-sm font-medium text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-              {link.label}
-            </Link>
-          ))}
-          {user && (
-            <Link href="/conta/apostas"
-              className="px-4 py-2 text-sm font-medium text-dark-300 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-              🎫 Minhas Apostas
-            </Link>
-          )}
+        {/* Desktop Nav */}
+        <nav
+          style={{
+            display: 'flex',
+            gap: '4px',
+            alignItems: 'center',
+          }}
+          className="desktop-nav"
+        >
+          <NavLink href="/">{t.header.lotteries}</NavLink>
+          <NavLink href="/resultados">{t.header.results}</NavLink>
+          <NavLink href="/como-jogar">{t.header.howToPlay}</NavLink>
+          {user && <NavLink href="/conta/apostas">{t.header.myBets}</NavLink>}
         </nav>
 
         {/* Right Side */}
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
           {/* Cart */}
-          <Link href="/carrinho"
-            className="relative p-2.5 rounded-lg text-dark-300 hover:text-white hover:bg-white/5 transition-colors">
-            <ShoppingCart size={20} />
-            {mounted && cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          <Link
+            href="/carrinho"
+            style={{
+              position: 'relative',
+              padding: '8px 10px',
+              color: '#94a3b8',
+              fontSize: '18px',
+              textDecoration: 'none',
+              borderRadius: '8px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = '#94a3b8'
+            }}
+          >
+            🛒
+            {cartCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  width: '18px',
+                  height: '18px',
+                  background: '#f97316',
+                  color: '#fff',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 {cartCount}
               </span>
             )}
           </Link>
 
-          {/* User */}
-          {user ? (
-            <div className="relative">
-              <button onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold">
-                  {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+          {/* User / Login */}
+          {user && profile ? (
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px 6px 6px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                }}
+              >
+                {/* Avatar */}
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-xs text-white font-medium leading-tight">{user.name || 'Minha Conta'}</div>
-                  <div className="text-[10px] text-green-400 font-semibold">R$ {Number(user.balance).toFixed(2)}</div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                    {profile.name?.split(' ')[0] || 'Usuário'}
+                  </div>
+                  <div style={{ color: '#4ade80', fontSize: '10px', fontWeight: 600 }}>
+                    R$ {(profile.balance || 0).toFixed(2).replace('.', ',')}
+                  </div>
                 </div>
-                <ChevronDown size={14} className="text-dark-400" />
+                <span style={{ color: '#475569', fontSize: '8px', marginLeft: '2px' }}>▼</span>
               </button>
 
-              {userMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-dark-900 border border-white/10 rounded-xl shadow-2xl z-50 py-2">
-                    <Link href="/conta" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark-300 hover:text-white hover:bg-white/5">
-                      <User size={16} /> Minha Conta
-                    </Link>
-                    <Link href="/conta/apostas" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark-300 hover:text-white hover:bg-white/5">
-                      <Ticket size={16} /> Minhas Apostas
-                    </Link>
-                    <Link href="/conta/depositar" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark-300 hover:text-white hover:bg-white/5">
-                      <Wallet size={16} /> Depositar
-                    </Link>
-                    <hr className="border-white/5 my-1" />
-                    <button onClick={() => { logout(); setUserMenuOpen(false) }}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 w-full">
-                      <LogOut size={16} /> Sair
+              {/* Dropdown Menu */}
+              {menuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    background: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+                    zIndex: 1000,
+                    minWidth: '200px',
+                  }}
+                >
+                  {/* Balance Header */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      background: 'rgba(59,130,246,0.1)',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    }}
+                  >
+                    <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                      {t.header.balance}
+                    </div>
+                    <div style={{ color: '#4ade80', fontSize: '18px', fontWeight: 800 }}>
+                      R$ {(profile.balance || 0).toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+
+                  <MenuLink href="/conta" icon="👤" onClick={() => setMenuOpen(false)}>
+                    {t.header.myAccount}
+                  </MenuLink>
+                  <MenuLink href="/conta/apostas" icon="🎫" onClick={() => setMenuOpen(false)}>
+                    {t.header.myBets}
+                  </MenuLink>
+                  <MenuLink href="/conta/depositar" icon="💰" onClick={() => setMenuOpen(false)}>
+                    {t.header.deposit}
+                  </MenuLink>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <button
+                      onClick={() => {
+                        signOut()
+                        setMenuOpen(false)
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'background 0.15s',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <span>🚪</span>
+                      <span>{t.header.logout}</span>
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </div>
           ) : (
-            <Link href="/auth/login"
-              className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-400 hover:to-orange-500 transition-all shadow-lg shadow-orange-500/20">
-              Entrar
-            </Link>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <Link
+                href="/auth/login"
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8' }}
+              >
+                {t.header.login}
+              </Link>
+              <Link
+                href="/auth/registro"
+                style={{
+                  padding: '8px 18px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  borderRadius: '8px',
+                  border: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)' }}
+              >
+                {t.header.register}
+              </Link>
+            </div>
           )}
 
-          {/* Mobile menu toggle */}
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 text-dark-300 hover:text-white">
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          {/* Mobile Menu Toggle */}
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            style={{
+              display: 'none',
+              padding: '8px',
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              fontSize: '20px',
+              cursor: 'pointer',
+            }}
+          >
+            {mobileOpen ? '✕' : '☰'}
           </button>
         </div>
       </div>
 
       {/* Mobile Nav */}
       {mobileOpen && (
-        <nav className="md:hidden bg-dark-950 border-t border-white/5 py-3 px-4 flex flex-col gap-1">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}
-              className="px-4 py-3 text-sm font-medium text-dark-300 hover:text-white rounded-lg hover:bg-white/5">
-              {link.label}
-            </Link>
-          ))}
+        <div
+          style={{
+            background: '#0f1629',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            padding: '12px 24px 16px',
+          }}
+          className="mobile-nav"
+        >
+          <MobileNavLink href="/" onClick={() => setMobileOpen(false)}>
+            🎰 {t.header.lotteries}
+          </MobileNavLink>
+          <MobileNavLink href="/resultados" onClick={() => setMobileOpen(false)}>
+            📊 {t.header.results}
+          </MobileNavLink>
+          <MobileNavLink href="/como-jogar" onClick={() => setMobileOpen(false)}>
+            ❓ {t.header.howToPlay}
+          </MobileNavLink>
           {user && (
             <>
-              <Link href="/conta/apostas" onClick={() => setMobileOpen(false)}
-                className="px-4 py-3 text-sm font-medium text-dark-300 hover:text-white rounded-lg hover:bg-white/5">
-                🎫 Minhas Apostas
-              </Link>
-              <Link href="/conta" onClick={() => setMobileOpen(false)}
-                className="px-4 py-3 text-sm font-medium text-dark-300 hover:text-white rounded-lg hover:bg-white/5">
-                👤 Minha Conta
-              </Link>
+              <MobileNavLink href="/conta/apostas" onClick={() => setMobileOpen(false)}>
+                🎫 {t.header.myBets}
+              </MobileNavLink>
+              <MobileNavLink href="/conta" onClick={() => setMobileOpen(false)}>
+                👤 {t.header.myAccount}
+              </MobileNavLink>
+              <MobileNavLink href="/conta/depositar" onClick={() => setMobileOpen(false)}>
+                💰 {t.header.deposit}
+              </MobileNavLink>
             </>
           )}
-        </nav>
+        </div>
       )}
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-menu-btn { display: block !important; }
+        }
+        @media (min-width: 769px) {
+          .mobile-nav { display: none !important; }
+        }
+      `}</style>
     </header>
+  )
+}
+
+// Nav Link Component
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        padding: '8px 14px',
+        fontSize: '13px',
+        fontWeight: 500,
+        color: '#94a3b8',
+        textDecoration: 'none',
+        borderRadius: '8px',
+        transition: 'all 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = '#fff'
+        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = '#94a3b8'
+        e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {children}
+    </Link>
+  )
+}
+
+// Menu Dropdown Link
+function MenuLink({ href, icon, children, onClick }: { href: string; icon: string; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '12px 16px',
+        color: '#e2e8f0',
+        fontSize: '13px',
+        fontWeight: 500,
+        textDecoration: 'none',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+    >
+      <span>{icon}</span>
+      <span>{children}</span>
+    </Link>
+  )
+}
+
+// Mobile Nav Link
+function MobileNavLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      style={{
+        display: 'block',
+        padding: '12px 0',
+        color: '#94a3b8',
+        fontSize: '14px',
+        fontWeight: 500,
+        textDecoration: 'none',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      {children}
+    </Link>
   )
 }

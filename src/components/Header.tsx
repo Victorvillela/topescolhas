@@ -247,7 +247,7 @@ export default function Header() {
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                     <button
                       onClick={() => {
-                        signOut()
+                        logout()
                         setMenuOpen(false)
                       }}
                       style={{

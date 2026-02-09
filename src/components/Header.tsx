@@ -10,7 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 export default function Header() {
   const { t } = useTranslation()
   const { items } = useCartStore()
-  const { user, signOut } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)

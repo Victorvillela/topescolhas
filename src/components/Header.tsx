@@ -10,7 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 export default function Header() {
   const { t } = useTranslation()
   const { items } = useCartStore()
-  const { user, profile, signOut } = useAuthStore()
+  const { user, signOut } = useAuthStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -149,7 +149,7 @@ export default function Header() {
           </Link>
 
           {/* User / Login */}
-          {user && profile ? (
+          {user ? (
             <div ref={menuRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
@@ -189,14 +189,14 @@ export default function Header() {
                     fontWeight: 700,
                   }}
                 >
-                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                  {user?.email?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}>
-                    {profile.name?.split(' ')[0] || 'Usuário'}
+                    {user?.email?.split(' ')[0] || 'Usuário'}
                   </div>
                   <div style={{ color: '#4ade80', fontSize: '10px', fontWeight: 600 }}>
-                    R$ {(profile.balance || 0).toFixed(2).replace('.', ',')}
+                    R$ {(0 || 0).toFixed(2).replace('.', ',')}
                   </div>
                 </div>
                 <span style={{ color: '#475569', fontSize: '8px', marginLeft: '2px' }}>▼</span>
@@ -230,7 +230,7 @@ export default function Header() {
                       {t.header.balance}
                     </div>
                     <div style={{ color: '#4ade80', fontSize: '18px', fontWeight: 800 }}>
-                      R$ {(profile.balance || 0).toFixed(2).replace('.', ',')}
+                      R$ {(0 || 0).toFixed(2).replace('.', ',')}
                     </div>
                   </div>
 

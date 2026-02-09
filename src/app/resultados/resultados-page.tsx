@@ -7,7 +7,7 @@ import { useTranslation } from '@/contexts/LanguageContext'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 interface ResultData {
-  slug: string3
+  slug: string
   name: string
   country: string
   numbers: number[]

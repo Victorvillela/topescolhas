@@ -1,88 +1,80 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { NextResponse } from 'next/server'
+import { getCachedResults, isCacheValid } from '@/lib/resultsCache'
+import { fetchAllResults } from '@/lib/fetchResults'
+import { setCachedResults } from '@/lib/resultsCache'
+import { supabase } from '@/lib/supabase'
 
-const CAIXA_API = 'https://api.guidi.dev.br/loteria'
+// GET /api/results — retorna resultados para a página
+// Prioridade: 1) Cache em memória  2) Supabase  3) Busca ao vivo
 
-const LOTTERY_MAP: Record<string, string> = {
-  'mega-sena': 'megasena',
-  'lotofacil': 'lotofacil',
-  'quina': 'quina',
-  'lotomania': 'lotomania',
-  'timemania': 'timemania',
-  'dupla-sena': 'duplasena',
-  'dia-de-sorte': 'diadesorte',
-}
+export const dynamic = 'force-dynamic'
 
-// GET /api/results?lottery=mega-sena
-// GET /api/results?sync=true (syncs all Brazilian lotteries)
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const lottery = searchParams.get('lottery')
-  const sync = searchParams.get('sync')
-  const supabase = createServerClient()
-
-  // Sync all Brazilian lotteries from Caixa API
-  if (sync === 'true') {
-    const results = []
-    for (const [slug, apiName] of Object.entries(LOTTERY_MAP)) {
-      try {
-        const res = await fetch(`${CAIXA_API}/${apiName}/latest`, { next: { revalidate: 300 } })
-        if (!res.ok) continue
-        const data = await res.json()
-
-        const numbers = (data.listaDezenas || []).map((n: string) => parseInt(n))
-        const extras = slug === 'dupla-sena'
-          ? (data.listaDezenasSegundoSorteio || []).map((n: string) => parseInt(n))
-          : []
-
-        const jackpot = data.valorEstimadoProximoConcurso
-          ? `R$ ${Number(data.valorEstimadoProximoConcurso).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-          : data.valorAcumuladoProximoConcurso
-            ? `R$ ${Number(data.valorAcumuladoProximoConcurso).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-            : ''
-
-        const LOTTERY_NAMES: Record<string, string> = {
-          'mega-sena': 'Mega-Sena', 'lotofacil': 'Lotofácil', 'quina': 'Quina',
-          'lotomania': 'Lotomania', 'timemania': 'Timemania', 'dupla-sena': 'Dupla Sena',
-          'dia-de-sorte': 'Dia de Sorte',
-        }
-
-        // Upsert result
-        await supabase.from('results').upsert({
-          lottery_slug: slug,
-          lottery_name: LOTTERY_NAMES[slug] || slug,
-          numbers,
-          extras,
-          jackpot,
-          prize_breakdown: data.listaRateioPremio || [],
-          draw_date: data.dataApuracao || new Date().toISOString().split('T')[0],
-          concurso: String(data.numero || ''),
-          accumulated: data.acumulado || false,
-        }, { onConflict: 'lottery_slug,concurso' })
-
-        // Update jackpot
-        await supabase.from('jackpots').upsert({
-          lottery_slug: slug,
-          lottery_name: LOTTERY_NAMES[slug] || slug,
-          amount: jackpot,
-          next_draw: data.dataProximoConcurso || null,
-          updated_at: new Date().toISOString(),
-        })
-
-        results.push({ slug, concurso: data.numero, numbers, jackpot })
-      } catch (e) {
-        console.error(`Error syncing ${slug}:`, e)
-      }
-    }
-    return NextResponse.json({ synced: results.length, results })
+export async function GET() {
+  // 1. Tenta cache em memória
+  const cache = getCachedResults()
+  if (cache.results.length > 0 && isCacheValid(720)) {
+    return NextResponse.json({
+      source: 'cache',
+      age: `${cache.age} min`,
+      results: cache.results,
+    })
   }
 
-  // Get results from DB
-  const query = supabase.from('results').select('*').order('draw_date', { ascending: false }).limit(20)
-  if (lottery) query.eq('lottery_slug', lottery)
+  // 2. Tenta Supabase
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+    try {
+      const { data, error } = await supabase
+        .from('lottery_results')
+        .select('*')
+        .order('draw_date', { ascending: false })
+        .limit(30)
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (!error && data && data.length > 0) {
+        const results = data.map((r: any) => ({
+          slug: r.slug,
+          name: r.name,
+          country: r.country,
+          numbers: r.numbers,
+          extras: r.extras,
+          date: r.draw_date,
+          prize: r.prize,
+          concurso: r.concurso,
+          nextPrize: r.next_prize,
+          nextDate: r.next_date,
+        }))
 
-  return NextResponse.json({ results: data })
+        // Atualiza cache
+        setCachedResults(results)
+
+        return NextResponse.json({
+          source: 'database',
+          results,
+        })
+      }
+    } catch (err) {
+      console.error('Erro ao buscar do Supabase:', err)
+    }
+  }
+
+  // 3. Busca ao vivo das APIs (fallback)
+  try {
+    const results = await fetchAllResults()
+    if (results.length > 0) {
+      setCachedResults(results)
+      return NextResponse.json({
+        source: 'live',
+        results,
+      })
+    }
+  } catch (err) {
+    console.error('Erro ao buscar ao vivo:', err)
+  }
+
+  // 4. Nada disponível
+  return NextResponse.json({
+    source: 'none',
+    results: [],
+    message: 'Nenhum resultado disponível. Acesse /api/cron/results para buscar.',
+  })
 }

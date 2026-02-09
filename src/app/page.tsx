@@ -3,12 +3,13 @@ import { LOTTERIES, getBrazilianLotteries, getInternationalLotteries } from '@/l
 import LotteryCard from '@/components/LotteryCard'
 import { Shield, CreditCard, Zap, Trophy, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 export default function HomePage() {
+  const { t } = useTranslation()
   const brazilian = getBrazilianLotteries()
   const international = getInternationalLotteries()
 
-  // Destaque: maiores jackpots
   const featured = [
     { ...LOTTERIES.find(l => l.slug === 'mega-millions')!, jackpot: 'US$ 346.000.000' },
     { ...LOTTERIES.find(l => l.slug === 'powerball')!, jackpot: 'US$ 137.000.000' },
@@ -25,17 +26,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 pt-16 pb-12 relative">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 text-brand-400 text-xs font-semibold mb-5 border border-brand-500/20">
-              <Zap size={14} /> Apostas 100% Online e Seguras
+              <Zap size={14} /> {t.hero.badge}
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-white leading-tight mb-4">
-              Jogue nas maiores<br />
+              {t.hero.title1}<br />
               <span className="bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent">
-                loterias do mundo
+                {t.hero.title2}
               </span>
             </h1>
             <p className="text-dark-400 text-base md:text-lg leading-relaxed">
-              Mega-Sena, Powerball, Mega Millions, EuroMilhões e muito mais.
-              Escolha seus números e concorra a prêmios milionários!
+              {t.hero.subtitle}
             </p>
           </div>
 
@@ -64,8 +64,8 @@ export default function HomePage() {
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl">🇧🇷</span>
           <div>
-            <h2 className="text-white font-bold text-xl">Loterias Brasileiras</h2>
-            <p className="text-dark-500 text-sm">Jogos da Caixa Econômica Federal</p>
+            <h2 className="text-white font-bold text-xl">{t.sections.brazilianLotteries}</h2>
+            <p className="text-dark-500 text-sm">{t.sections.brazilianSubtitle}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -80,8 +80,8 @@ export default function HomePage() {
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl">🌍</span>
           <div>
-            <h2 className="text-white font-bold text-xl">Loterias Internacionais</h2>
-            <p className="text-dark-500 text-sm">Os maiores jackpots do mundo</p>
+            <h2 className="text-white font-bold text-xl">{t.sections.internationalLotteries}</h2>
+            <p className="text-dark-500 text-sm">{t.sections.internationalSubtitle}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -94,15 +94,15 @@ export default function HomePage() {
       {/* COMO FUNCIONA */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-10">
-          <h2 className="text-white font-bold text-2xl mb-2">Como Funciona</h2>
-          <p className="text-dark-400 text-sm">Simples, rápido e seguro</p>
+          <h2 className="text-white font-bold text-2xl mb-2">{t.sections.howItWorks}</h2>
+          <p className="text-dark-400 text-sm">{t.sections.howItWorksSubtitle}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
-            { icon: '🎯', title: 'Escolha a Loteria', desc: 'Navegue entre dezenas de loterias nacionais e internacionais' },
-            { icon: '🔢', title: 'Selecione os Números', desc: 'Escolha seus números da sorte ou use a Surpresinha' },
-            { icon: '💳', title: 'Faça o Pagamento', desc: 'Pague com PIX, cartão de crédito ou boleto bancário' },
-            { icon: '🏆', title: 'Ganhe Prêmios!', desc: 'Seus prêmios são creditados automaticamente na sua conta' },
+            { icon: '🎯', title: t.steps.step1Title, desc: t.steps.step1Desc },
+            { icon: '🔢', title: t.steps.step2Title, desc: t.steps.step2Desc },
+            { icon: '💳', title: t.steps.step3Title, desc: t.steps.step3Desc },
+            { icon: '🏆', title: t.steps.step4Title, desc: t.steps.step4Desc },
           ].map((step, i) => (
             <div key={i} className="text-center p-6 rounded-2xl bg-dark-900/30 border border-white/5">
               <div className="text-3xl mb-3">{step.icon}</div>
@@ -117,10 +117,10 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 pb-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: <Shield size={20} />, label: 'Seguro & Confiável', color: 'text-green-400' },
-            { icon: <CreditCard size={20} />, label: 'PIX & Cartão', color: 'text-blue-400' },
-            { icon: <Zap size={20} />, label: 'Pagamento Instantâneo', color: 'text-yellow-400' },
-            { icon: <Trophy size={20} />, label: 'Prêmios Reais', color: 'text-orange-400' },
+            { icon: <Shield size={20} />, label: t.trust.secure, color: 'text-green-400' },
+            { icon: <CreditCard size={20} />, label: t.trust.payment, color: 'text-blue-400' },
+            { icon: <Zap size={20} />, label: t.trust.instant, color: 'text-yellow-400' },
+            { icon: <Trophy size={20} />, label: t.trust.realPrizes, color: 'text-orange-400' },
           ].map((badge, i) => (
             <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-dark-900/30 border border-white/5">
               <div className={badge.color}>{badge.icon}</div>

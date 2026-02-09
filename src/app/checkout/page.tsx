@@ -7,8 +7,10 @@ import ResultBalls from '@/components/ResultBalls'
 import { getLotteryBySlug } from '@/lib/lotteries'
 import Link from 'next/link'
 import { Lock, QrCode, CreditCard, Wallet, Check, Loader2 } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 export default function CheckoutPage() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { items, getTotal, clearCart } = useCartStore()
   const { user } = useAuthStore()
@@ -22,11 +24,11 @@ export default function CheckoutPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center animate-fade-in">
         <div className="text-5xl mb-4">🔐</div>
-        <h1 className="text-white font-bold text-xl mb-2">Faça login para continuar</h1>
-        <p className="text-dark-400 text-sm mb-6">Você precisa estar logado para finalizar a compra.</p>
+        <h1 className="text-white font-bold text-xl mb-2">{t.auth.loginTitle}</h1>
+        <p className="text-dark-400 text-sm mb-6">{t.auth.loginSubtitle}</p>
         <Link href="/auth/login"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-bold text-sm rounded-xl">
-          Entrar na Conta
+          {t.auth.loginButton}
         </Link>
       </div>
     )
@@ -36,8 +38,8 @@ export default function CheckoutPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center animate-fade-in">
         <div className="text-5xl mb-4">🛒</div>
-        <h1 className="text-white font-bold text-xl mb-2">Carrinho vazio</h1>
-        <Link href="/" className="text-brand-400 text-sm font-semibold">← Voltar para Loterias</Link>
+        <h1 className="text-white font-bold text-xl mb-2">{t.cart.empty}</h1>
+        <Link href="/" className="text-brand-400 text-sm font-semibold">← {t.cart.browseLotteries}</Link>
       </div>
     )
   }
@@ -48,15 +50,15 @@ export default function CheckoutPage() {
         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Check size={32} className="text-green-400" />
         </div>
-        <h1 className="text-white font-bold text-2xl mb-2">Aposta Confirmada! 🎉</h1>
-        <p className="text-dark-400 text-sm mb-6">Suas apostas foram registradas com sucesso. Boa sorte!</p>
+        <h1 className="text-white font-bold text-2xl mb-2">{t.checkout.success} 🎉</h1>
+        <p className="text-dark-400 text-sm mb-6">{t.checkout.successDesc}</p>
         <div className="flex flex-col gap-3">
           <Link href="/conta/apostas"
             className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-bold text-sm rounded-xl">
-            Ver Minhas Apostas
+            {t.checkout.viewBets}
           </Link>
           <Link href="/" className="text-dark-400 hover:text-white text-sm font-medium transition-colors">
-            Fazer mais apostas
+            {t.cart.addMore}
           </Link>
         </div>
       </div>
@@ -77,43 +79,38 @@ export default function CheckoutPage() {
             extras: i.extras,
             price: i.price,
           })),
-          total,
-          method,
-          userId: user.id,
+          total, method, userId: user.id,
         }),
       })
       const data = await res.json()
-
       if (method === 'pix' && data.pixCode) {
         setPixCode(data.pixCode)
       } else if (data.success) {
         clearCart()
         setSuccess(true)
       }
-    } catch (err) {
-      console.error(err)
-    }
+    } catch (err) { console.error(err) }
     setLoading(false)
   }
 
   const payMethods = [
-    { id: 'pix' as const, icon: <QrCode size={18} />, label: 'PIX', desc: 'Pagamento instantâneo' },
-    { id: 'card' as const, icon: <CreditCard size={18} />, label: 'Cartão', desc: 'Crédito ou débito' },
-    { id: 'balance' as const, icon: <Wallet size={18} />, label: 'Saldo', desc: `R$ ${Number(user.balance).toFixed(2)} disponível` },
+    { id: 'pix' as const, icon: <QrCode size={18} />, label: t.checkout.pix, desc: t.checkout.pixDesc },
+    { id: 'card' as const, icon: <CreditCard size={18} />, label: t.checkout.card, desc: t.checkout.cardDesc },
+    { id: 'balance' as const, icon: <Wallet size={18} />, label: t.checkout.balanceMethod, desc: `R$ ${Number(user.balance).toFixed(2)} ${t.checkout.available}` },
   ]
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
       <h1 className="text-white font-bold text-2xl mb-1 flex items-center gap-2">
-        <Lock size={22} /> Checkout
+        <Lock size={22} /> {t.checkout.title}
       </h1>
-      <p className="text-dark-400 text-sm mb-6">Finalize suas apostas de forma segura</p>
+      <p className="text-dark-400 text-sm mb-6">{t.checkout.subtitle}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Payment Method */}
           <div className="bg-dark-900/50 border border-white/5 rounded-xl p-5">
-            <h3 className="text-white font-bold text-sm mb-4">Forma de Pagamento</h3>
+            <h3 className="text-white font-bold text-sm mb-4">{t.checkout.paymentMethod}</h3>
             <div className="grid grid-cols-3 gap-3">
               {payMethods.map(pm => (
                 <button key={pm.id} onClick={() => setMethod(pm.id)}
@@ -130,47 +127,26 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* PIX QR Code */}
+          {/* PIX */}
           {pixCode && method === 'pix' && (
             <div className="bg-dark-900/50 border border-white/5 rounded-xl p-5 text-center">
-              <h3 className="text-white font-bold text-sm mb-3">Escaneie o QR Code</h3>
+              <h3 className="text-white font-bold text-sm mb-3">{t.checkout.scanQR}</h3>
               <div className="w-48 h-48 bg-white rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <QrCode size={120} className="text-dark-900" />
               </div>
-              <p className="text-dark-400 text-xs mb-3">Ou copie o código PIX:</p>
-              <div className="bg-dark-800 rounded-lg p-3 text-xs text-dark-300 font-mono break-all">
-                {pixCode}
-              </div>
+              <p className="text-dark-400 text-xs mb-3">{t.checkout.orCopyPix}</p>
+              <div className="bg-dark-800 rounded-lg p-3 text-xs text-dark-300 font-mono break-all">{pixCode}</div>
               <button onClick={() => { navigator.clipboard.writeText(pixCode) }}
                 className="mt-3 px-4 py-2 bg-brand-500/20 text-brand-400 text-xs font-semibold rounded-lg hover:bg-brand-500/30 transition-colors">
-                Copiar Código
+                {t.checkout.copyCode}
               </button>
-            </div>
-          )}
-
-          {/* Card Form */}
-          {method === 'card' && (
-            <div className="bg-dark-900/50 border border-white/5 rounded-xl p-5">
-              <h3 className="text-white font-bold text-sm mb-4">Dados do Cartão</h3>
-              <div className="space-y-3">
-                <input type="text" placeholder="Número do cartão" maxLength={19}
-                  className="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-brand-500" />
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="text" placeholder="MM/AA" maxLength={5}
-                    className="bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-brand-500" />
-                  <input type="text" placeholder="CVV" maxLength={4}
-                    className="bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-brand-500" />
-                </div>
-                <input type="text" placeholder="Nome no cartão"
-                  className="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-brand-500" />
-              </div>
             </div>
           )}
         </div>
 
-        {/* Order Summary */}
+        {/* Summary */}
         <div className="bg-dark-900/50 border border-white/5 rounded-xl p-5 h-fit sticky top-20">
-          <h3 className="text-white font-bold text-sm mb-4">Suas Apostas</h3>
+          <h3 className="text-white font-bold text-sm mb-4">{t.checkout.yourBets}</h3>
           <div className="space-y-3 mb-4">
             {items.map(item => {
               const lot = getLotteryBySlug(item.lotterySlug)
@@ -187,18 +163,18 @@ export default function CheckoutPage() {
           </div>
           <hr className="border-white/5 mb-4" />
           <div className="flex items-center justify-between mb-6">
-            <span className="text-white font-bold">Total</span>
+            <span className="text-white font-bold">{t.cart.total}</span>
             <span className="text-white font-black text-xl">R$ {total.toFixed(2)}</span>
           </div>
           <button onClick={handlePayment} disabled={loading}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold text-sm rounded-xl hover:from-green-400 hover:to-green-500 transition-all shadow-lg shadow-green-500/20 disabled:opacity-50">
-            {loading ? <><Loader2 size={16} className="animate-spin" /> Processando...</> :
-              method === 'pix' ? <><QrCode size={16} /> Gerar PIX</> :
-              method === 'card' ? <><CreditCard size={16} /> Pagar com Cartão</> :
-              <><Wallet size={16} /> Pagar com Saldo</>}
+            {loading ? <><Loader2 size={16} className="animate-spin" /> {t.checkout.processing}</> :
+              method === 'pix' ? <><QrCode size={16} /> {t.checkout.generatePix}</> :
+              method === 'card' ? <><CreditCard size={16} /> {t.checkout.card}</> :
+              <><Wallet size={16} /> {t.checkout.balanceMethod}</>}
           </button>
           <div className="flex items-center justify-center gap-1.5 mt-3 text-dark-500 text-[10px]">
-            <Lock size={10} /> Pagamento seguro e criptografado
+            <Lock size={10} /> {t.checkout.securePayment}
           </div>
         </div>
       </div>

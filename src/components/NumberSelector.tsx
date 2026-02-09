@@ -3,12 +3,14 @@ import { useState, useCallback } from 'react'
 import { LotteryConfig } from '@/lib/lotteries'
 import { useCartStore } from '@/store/cartStore'
 import { Shuffle, Trash2, ShoppingCart, Check } from 'lucide-react'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 interface Props {
   lottery: LotteryConfig
 }
 
 export default function NumberSelector({ lottery }: Props) {
+  const { t } = useTranslation()
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([])
   const [selectedExtras, setSelectedExtras] = useState<number[]>([])
   const [justAdded, setJustAdded] = useState(false)
@@ -31,7 +33,6 @@ export default function NumberSelector({ lottery }: Props) {
   }
 
   const quickPick = useCallback(() => {
-    // Gera números aleatórios
     const nums: number[] = []
     while (nums.length < lottery.mainNumbers) {
       const n = Math.floor(Math.random() * (lottery.mainRange[1] - lottery.mainRange[0] + 1)) + lottery.mainRange[0]
@@ -74,7 +75,6 @@ export default function NumberSelector({ lottery }: Props) {
     clearAll()
   }
 
-  // Gera array de números do range
   const mainRange = Array.from(
     { length: lottery.mainRange[1] - lottery.mainRange[0] + 1 },
     (_, i) => i + lottery.mainRange[0]
@@ -84,7 +84,6 @@ export default function NumberSelector({ lottery }: Props) {
     (_, i) => i + lottery.extraRange[0]
   ) : []
 
-  // Color classes for extras
   const extraColorMap: Record<string, string> = {
     red: 'bg-red-100 text-red-800 border-red-300 ring-red-500',
     gold: 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-yellow-500',
@@ -106,7 +105,7 @@ export default function NumberSelector({ lottery }: Props) {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-bold text-sm">
-            Escolha {lottery.mainNumbers} números
+            {t.lotteryPage.choose} {lottery.mainNumbers} {t.lotteryPage.numbers}
             <span className="text-dark-400 font-normal ml-1">
               ({selectedNumbers.length}/{lottery.mainNumbers})
             </span>
@@ -114,11 +113,11 @@ export default function NumberSelector({ lottery }: Props) {
           <div className="flex items-center gap-2">
             <button onClick={quickPick}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 text-dark-300 hover:text-white hover:bg-white/10 transition-colors">
-              <Shuffle size={14} /> Surpresinha
+              <Shuffle size={14} /> {t.lotteryPage.quickPick}
             </button>
             <button onClick={clearAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 text-dark-300 hover:text-red-400 hover:bg-white/10 transition-colors">
-              <Trash2 size={14} /> Limpar
+              <Trash2 size={14} /> {t.lotteryPage.clear}
             </button>
           </div>
         </div>
@@ -144,7 +143,7 @@ export default function NumberSelector({ lottery }: Props) {
       {lottery.extraNumbers > 0 && (
         <div>
           <h3 className="text-white font-bold text-sm mb-3">
-            Escolha {lottery.extraNumbers} {lottery.extraName}
+            {t.lotteryPage.choose} {lottery.extraNumbers} {lottery.extraName}
             <span className="text-dark-400 font-normal ml-1">
               ({selectedExtras.length}/{lottery.extraNumbers})
             </span>
@@ -170,7 +169,7 @@ export default function NumberSelector({ lottery }: Props) {
       {/* Selected Summary */}
       {(selectedNumbers.length > 0 || selectedExtras.length > 0) && (
         <div className="bg-dark-800/50 border border-white/5 rounded-xl p-4">
-          <div className="text-dark-500 text-[10px] font-semibold uppercase tracking-wider mb-2">Seus Números</div>
+          <div className="text-dark-500 text-[10px] font-semibold uppercase tracking-wider mb-2">{t.lotteryPage.yourNumbers}</div>
           <div className="flex items-center gap-2 flex-wrap">
             {selectedNumbers.map(n => (
               <span key={n} className="w-9 h-9 rounded-full bg-blue-100 text-blue-900 text-sm font-bold flex items-center justify-center border-2 border-blue-400">
@@ -198,9 +197,9 @@ export default function NumberSelector({ lottery }: Props) {
           }`}
           style={isComplete ? { background: lottery.gradient, boxShadow: `0 8px 20px ${lottery.color}33` } : {}}>
           {justAdded ? (
-            <><Check size={18} /> Adicionado ao Carrinho!</>
+            <><Check size={18} /> ✓ {t.lotteryPage.addToCart}!</>
           ) : (
-            <><ShoppingCart size={18} /> Adicionar ao Carrinho — R$ {lottery.pricePerBet.toFixed(2)}</>
+            <><ShoppingCart size={18} /> {t.lotteryPage.addToCart} — R$ {lottery.pricePerBet.toFixed(2)}</>
           )}
         </button>
       </div>

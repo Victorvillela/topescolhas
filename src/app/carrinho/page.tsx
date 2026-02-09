@@ -4,8 +4,10 @@ import ResultBalls from '@/components/ResultBalls'
 import Link from 'next/link'
 import { Trash2, ShoppingCart, ArrowRight, Plus } from 'lucide-react'
 import { getLotteryBySlug } from '@/lib/lotteries'
+import { useTranslation } from '@/contexts/LanguageContext'
 
 export default function CartPage() {
+  const { t } = useTranslation()
   const { items, removeItem, clearCart, getTotal } = useCartStore()
   const total = getTotal()
 
@@ -13,11 +15,11 @@ export default function CartPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center animate-fade-in">
         <div className="text-6xl mb-4">🛒</div>
-        <h1 className="text-white font-bold text-2xl mb-2">Carrinho Vazio</h1>
-        <p className="text-dark-400 text-sm mb-6">Escolha uma loteria e selecione seus números da sorte!</p>
+        <h1 className="text-white font-bold text-2xl mb-2">{t.cart.empty}</h1>
+        <p className="text-dark-400 text-sm mb-6">{t.cart.emptyDesc}</p>
         <Link href="/"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-sm rounded-xl hover:from-orange-400 hover:to-orange-500 transition-all">
-          <Plus size={16} /> Ver Loterias
+          <Plus size={16} /> {t.cart.browseLotteries}
         </Link>
       </div>
     )
@@ -28,13 +30,13 @@ export default function CartPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-white font-bold text-2xl flex items-center gap-2">
-            <ShoppingCart size={24} /> Carrinho
+            <ShoppingCart size={24} /> {t.cart.title}
           </h1>
-          <p className="text-dark-400 text-sm">{items.length} aposta{items.length > 1 ? 's' : ''}</p>
+          <p className="text-dark-400 text-sm">{items.length} {items.length > 1 ? t.cart.bets : t.cart.bet}</p>
         </div>
         <button onClick={clearCart}
           className="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-1.5">
-          <Trash2 size={14} /> Limpar tudo
+          <Trash2 size={14} /> {t.cart.clearAll}
         </button>
       </div>
 
@@ -74,7 +76,7 @@ export default function CartPage() {
 
         {/* Summary */}
         <div className="bg-dark-900/50 border border-white/5 rounded-xl p-5 h-fit sticky top-20">
-          <h3 className="text-white font-bold text-sm mb-4">Resumo</h3>
+          <h3 className="text-white font-bold text-sm mb-4">{t.cart.summary}</h3>
           <div className="space-y-2 mb-4">
             {items.map(item => (
               <div key={item.id} className="flex items-center justify-between text-xs">
@@ -85,16 +87,16 @@ export default function CartPage() {
           </div>
           <hr className="border-white/5 mb-4" />
           <div className="flex items-center justify-between mb-6">
-            <span className="text-white font-bold text-sm">Total</span>
+            <span className="text-white font-bold text-sm">{t.cart.total}</span>
             <span className="text-white font-black text-xl">R$ {total.toFixed(2)}</span>
           </div>
           <Link href="/checkout"
             className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold text-sm rounded-xl hover:from-green-400 hover:to-green-500 transition-all shadow-lg shadow-green-500/20">
-            Finalizar Compra <ArrowRight size={16} />
+            {t.cart.checkout} <ArrowRight size={16} />
           </Link>
           <Link href="/"
             className="block text-center text-dark-400 hover:text-white text-xs font-medium mt-3 transition-colors">
-            + Adicionar mais apostas
+            + {t.cart.addMore}
           </Link>
         </div>
       </div>

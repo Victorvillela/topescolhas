@@ -1,7 +1,5 @@
 // ============================================
 // CACHE DE RESULTADOS EM MEMÓRIA
-// Armazena os resultados da última execução do cron
-// para servir via API sem precisar buscar novamente
 // ============================================
 
 import { LotteryResult } from './fetchResults'
@@ -13,14 +11,14 @@ interface CacheData {
 
 let cache: CacheData | null = null
 
-export function setResultsCache(results: LotteryResult[]): void {
+export function setCachedResults(results: LotteryResult[]): void {
   cache = {
     results,
     updatedAt: new Date().toISOString(),
   }
 }
 
-export function getResultsCache(): CacheData | null {
+export function getCachedResults(): CacheData | null {
   return cache
 }
 

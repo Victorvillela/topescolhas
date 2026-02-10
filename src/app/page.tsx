@@ -1,219 +1,264 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { lotteries, getTopJackpots, getByRegion } from '@/lib/lotteries'
-import { LotteryCard } from '@/components/LotteryCard'
-import { Zap, Shield, CreditCard, Trophy, Loader2, ArrowRight } from 'lucide-react'
+import { LOTTERIES } from '@/lib/lotteries'
+import ResultBalls from '@/components/ResultBalls'
 import Link from 'next/link'
-import { useTranslation } from '@/hooks/useTranslation'
+import { useTranslation } from '@/contexts/LanguageContext'
+import { Loader2, RefreshCw } from 'lucide-react'
 
-// ============================================
-// HOOK: Busca jackpots reais da API
-// ============================================
-
-interface JackpotInfo {
+interface ResultData {
   slug: string
-  jackpot: string
-  jackpotRaw?: number
-  nextDraw?: string
+  name: string
+  country: string
+  numbers: number[]
+  extras: number[]
+  date: string
+  prize: string
+  concurso: string
 }
 
-function useJackpots() {
-  const [jackpots, setJackpots] = useState<Record<string, JackpotInfo>>({})
+// ========================================
+// BANDEIRAS E GRADIENTES POR PAÍS/SLUG
+// ========================================
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  'Brasil': '🇧🇷',
+  'E.U.A.': '🇺🇸',
+  'Europa': '🇪🇺',
+  'Itália': '🇮🇹',
+  'França': '🇫🇷',
+  'Reino Unido': '🇬🇧',
+  'Alemanha': '🇩🇪',
+  'Irlanda': '🇮🇪',
+  'Espanha': '🇪🇸',
+  'Austrália': '🇦🇺',
+  'Portugal': '🇵🇹',
+  'Canadá': '🇨🇦',
+  'Japão': '🇯🇵',
+  'México': '🇲🇽',
+  'Argentina': '🇦🇷',
+  'Chile': '🇨🇱',
+  'Colômbia': '🇨🇴',
+  'Peru': '🇵🇪',
+  'África do Sul': '🇿🇦',
+  'Polônia': '🇵🇱',
+  'Hungria': '🇭🇺',
+  'Filipinas': '🇵🇭',
+  'Áustria': '🇦🇹',
+  'Romênia': '🇷🇴',
+}
+
+// ⚠️ Removidos: la-primitiva, el-gordo, oz-lotto, powerball-au, german-lotto
+const SLUG_GRADIENTS: Record<string, string> = {
+  'eurojackpot': 'linear-gradient(135deg, #f59e0b, #d97706)',
+  'euromilhoes': 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+  'superenalotto': 'linear-gradient(135deg, #059669, #047857)',
+  'france-loto': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  'uk-lotto': 'linear-gradient(135deg, #dc2626, #b91c1c)',
+  'irish-lotto': 'linear-gradient(135deg, #16a34a, #15803d)',
+  'bonoloto': 'linear-gradient(135deg, #ea580c, #c2410c)',
+  'saturday-lotto': 'linear-gradient(135deg, #0284c7, #0369a1)',
+  'austria-lotto': 'linear-gradient(135deg, #ef4444, #dc2626)',
+  'polish-lotto': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'totoloto': 'linear-gradient(135deg, #059669, #047857)',
+  'lotto-649': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'sa-lotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
+  'sa-powerball': 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+  'sa-daily-lotto': 'linear-gradient(135deg, #10b981, #059669)',
+  'hatoslotto': 'linear-gradient(135deg, #dc2626, #059669)',
+  'otoslotto': 'linear-gradient(135deg, #059669, #047857)',
+  'ph-ultra-lotto': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  'ph-grand-lotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
+}
+
+const COUNTRY_GRADIENTS: Record<string, string> = {
+  'Europa': 'linear-gradient(135deg, #2563eb, #1e40af)',
+  'Itália': 'linear-gradient(135deg, #059669, #047857)',
+  'França': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  'Reino Unido': 'linear-gradient(135deg, #dc2626, #b91c1c)',
+  'Irlanda': 'linear-gradient(135deg, #16a34a, #15803d)',
+  'Espanha': 'linear-gradient(135deg, #ea580c, #c2410c)',
+  'Austrália': 'linear-gradient(135deg, #0284c7, #0369a1)',
+  'Portugal': 'linear-gradient(135deg, #059669, #047857)',
+  'Canadá': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'África do Sul': 'linear-gradient(135deg, #f59e0b, #d97706)',
+  'Polônia': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'Hungria': 'linear-gradient(135deg, #dc2626, #059669)',
+  'Filipinas': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  'Áustria': 'linear-gradient(135deg, #ef4444, #dc2626)',
+  'Romênia': 'linear-gradient(135deg, #2563eb, #f59e0b)',
+}
+
+function getGradient(slug: string, country: string): string {
+  return SLUG_GRADIENTS[slug] || COUNTRY_GRADIENTS[country] || 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+}
+
+function getFlag(slug: string, country: string): string {
+  const lot = LOTTERIES.find(l => l.slug === slug)
+  if (lot?.flag) return lot.flag
+  return COUNTRY_FLAGS[country] || '🌍'
+}
+
+function getEmoji(slug: string): string {
+  const lot = LOTTERIES.find(l => l.slug === slug)
+  return lot?.emoji || ''
+}
+
+export default function ResultadosPage() {
+  const { t } = useTranslation()
+  const [results, setResults] = useState<ResultData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState<'all' | 'br' | 'int'>('all')
 
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/jackpots')
-      .then(r => r.json())
-      .then(data => {
-        if (!cancelled && data.jackpots?.length > 0) {
-          const map: Record<string, JackpotInfo> = {}
-          data.jackpots.forEach((j: JackpotInfo) => { map[j.slug] = j })
-          setJackpots(map)
-        }
-      })
-      .catch(err => console.error('Jackpots:', err))
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    fetchResults()
   }, [])
 
-  return { jackpots, loading }
-}
+  async function fetchResults() {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/cron/results')
+      if (!res.ok) throw new Error('Erro ao buscar resultados')
+      const data = await res.json()
+      setResults(data.results || [])
+    } catch (err) {
+      setError('Erro ao carregar resultados. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-// ============================================
-// HOME PAGE
-// ============================================
+  const filtered = results.filter(r => {
+    if (filter === 'br') return r.country === 'Brasil'
+    if (filter === 'int') return r.country !== 'Brasil'
+    return true
+  })
 
-export default function Home() {
-  const { t } = useTranslation()
-  const { jackpots, loading } = useJackpots()
-
-  // Helpers
-  const getJackpot = (slug: string) => jackpots[slug]?.jackpot
-  const getNextDraw = (slug: string) => jackpots[slug]?.nextDraw
-
-  // Separar por região
-  const brazilian = lotteries.filter(l => l.region === 'brasil')
-  const international = lotteries.filter(l => l.region !== 'brasil')
-
-  // Featured: 3 maiores jackpots (com valor real se disponível)
-  const featuredSlugs = ['mega-millions', 'powerball', 'mega-sena']
-  const featured = featuredSlugs
-    .map(slug => {
-      const lot = lotteries.find(l => l.slug === slug)
-      if (!lot) return null
-      const jp = jackpots[slug]
-      return {
-        ...lot,
-        displayJackpot: jp?.jackpot || lot.jackpot,
-        sortValue: jp?.jackpotRaw || lot.jackpotValue || 0,
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => (b!.sortValue) - (a!.sortValue)) as (typeof lotteries[0] & { displayJackpot: string; sortValue: number })[]
+  // Ordena: brasileiras primeiro, depois internacionais
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.country === 'Brasil' && b.country !== 'Brasil') return -1
+    if (a.country !== 'Brasil' && b.country === 'Brasil') return 1
+    return a.name.localeCompare(b.name)
+  })
 
   return (
-    <div className="animate-fade-in">
-      {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-900/20 via-transparent to-transparent" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-500/5 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-gray-950 text-white">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">
+            🎲 {t('results.title', 'Resultados')}
+          </h1>
+          <button
+            onClick={fetchResults}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {t('results.refresh', 'Atualizar')}
+          </button>
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 pt-16 pb-12 relative">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 text-brand-400 text-xs font-semibold mb-5 border border-brand-500/20">
-              <Zap size={14} /> {t('home.badge', 'Apostas 100% Online e Seguras')}
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight mb-4">
-              {t('home.title1', 'Jogue nas maiores')}<br />
-              <span className="bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent">
-                {t('home.title2', 'loterias do mundo')}
-              </span>
-            </h1>
-            <p className="text-dark-400 text-base md:text-lg leading-relaxed">
-              {t('home.subtitle', 'Mega-Sena, Powerball, Mega Millions, EuroMilhões e muito mais. Escolha seus números e concorra a prêmios milionários!')}
-            </p>
+        {/* Filtros */}
+        <div className="flex gap-2 mb-6">
+          {(['all', 'br', 'int'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === f
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              {f === 'all' ? `🌍 ${t('results.all', 'Todas')}` :
+               f === 'br' ? `🇧🇷 ${t('results.brazilian', 'Brasileiras')}` :
+               `🌎 ${t('results.international', 'Internacionais')}`}
+            </button>
+          ))}
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            <span className="ml-3 text-gray-400">{t('results.loading', 'Carregando resultados...')}</span>
           </div>
+        )}
 
-          {/* Featured Jackpots - 3 maiores */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-            {featured.map(f => (
-              <Link key={f.slug} href={`/loterias/${f.slug}`}
-                className="group flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-dark-900/50 hover:bg-dark-900/80 hover:border-white/10 transition-all">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
-                  style={{ background: f.gradient }}>
-                  {f.logo}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-dark-400 text-xs font-medium">{f.flag} {f.name}</div>
-                  <div className="text-white font-black text-lg truncate">
-                    {loading ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Loader2 size={14} className="animate-spin text-dark-500" />
-                        <span className="text-dark-500 text-sm font-medium">...</span>
-                      </span>
-                    ) : (
-                      f.displayJackpot
+        {error && (
+          <div className="text-center py-20 text-red-400">
+            <p>{error}</p>
+            <button onClick={fetchResults} className="mt-4 px-6 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700">
+              {t('results.tryAgain', 'Tentar novamente')}
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sorted.map((result, idx) => {
+              const gradient = getGradient(result.slug, result.country)
+              const flag = getFlag(result.slug, result.country)
+              const emoji = getEmoji(result.slug)
+
+              return (
+                <Link
+                  key={`${result.slug}-${idx}`}
+                  href={`/loterias/${result.slug}`}
+                  className="block bg-gray-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform"
+                >
+                  {/* Header com gradiente */}
+                  <div
+                    className="px-4 py-3 flex items-center justify-between"
+                    style={{ background: gradient }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{flag}</span>
+                      <div>
+                        <h3 className="font-bold text-white text-sm">
+                          {emoji ? `${emoji} ` : ''}{result.name}
+                        </h3>
+                        <p className="text-white/70 text-xs">{result.country}</p>
+                      </div>
+                    </div>
+                    {result.concurso && (
+                      <span className="text-white/60 text-xs">#{result.concurso}</span>
                     )}
                   </div>
-                </div>
-                <ArrowRight size={16} className="text-dark-500 group-hover:text-white transition-colors shrink-0" />
-              </Link>
-            ))}
+
+                  {/* Corpo */}
+                  <div className="p-4">
+                    <p className="text-gray-500 text-xs mb-2">
+                      {result.date ? new Date(result.date + 'T12:00:00').toLocaleDateString('pt-BR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      }) : '—'}
+                    </p>
+
+                    <ResultBalls
+                      numbers={result.numbers}
+                      extras={result.extras}
+                      size="sm"
+                    />
+
+                    <p className="mt-3 text-sm font-semibold text-emerald-400">
+                      {result.prize}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
+        )}
 
-          {/* Indicador de dados reais */}
-          {!loading && Object.keys(jackpots).length > 0 && (
-            <div className="text-center mt-4">
-              <span className="inline-flex items-center gap-1.5 text-[10px] text-dark-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                {t('home.realtime', 'Jackpots atualizados em tempo real')}
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ============ LOTERIAS BRASILEIRAS ============ */}
-      <section className="max-w-7xl mx-auto px-4 py-10">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-2xl">🇧🇷</span>
-          <div>
-            <h2 className="text-white font-bold text-xl">{t('home.brazilian', 'Loterias Brasileiras')}</h2>
-            <p className="text-dark-500 text-sm">{t('home.brazilianSub', 'Jogos da Caixa Econômica Federal')}</p>
+        {!loading && !error && sorted.length === 0 && (
+          <div className="text-center py-20 text-gray-500">
+            <p>{t('results.noResults', 'Nenhum resultado encontrado.')}</p>
           </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {brazilian.map(lot => (
-            <LotteryCard
-              key={lot.slug}
-              lottery={lot}
-              jackpotOverride={getJackpot(lot.slug)}
-              nextDrawOverride={getNextDraw(lot.slug)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* ============ LOTERIAS INTERNACIONAIS ============ */}
-      <section className="max-w-7xl mx-auto px-4 py-10">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-2xl">🌍</span>
-          <div>
-            <h2 className="text-white font-bold text-xl">{t('home.international', 'Loterias Internacionais')}</h2>
-            <p className="text-dark-500 text-sm">{t('home.internationalSub', 'Os maiores jackpots do mundo')}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {international.map(lot => (
-            <LotteryCard
-              key={lot.slug}
-              lottery={lot}
-              jackpotOverride={getJackpot(lot.slug)}
-              nextDrawOverride={getNextDraw(lot.slug)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* ============ COMO FUNCIONA ============ */}
-      <section className="max-w-7xl mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <h2 className="text-white font-bold text-2xl mb-2">{t('home.howTitle', 'Como Funciona')}</h2>
-          <p className="text-dark-400 text-sm">{t('home.howSub', 'Simples, rápido e seguro')}</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[
-            { icon: '🎯', title: t('home.step1', 'Escolha a Loteria'), desc: t('home.step1d', 'Navegue entre dezenas de loterias nacionais e internacionais') },
-            { icon: '🔢', title: t('home.step2', 'Selecione os Números'), desc: t('home.step2d', 'Escolha seus números da sorte ou use a Surpresinha') },
-            { icon: '💳', title: t('home.step3', 'Faça o Pagamento'), desc: t('home.step3d', 'Pague com PIX, cartão de crédito ou boleto bancário') },
-            { icon: '🏆', title: t('home.step4', 'Ganhe Prêmios!'), desc: t('home.step4d', 'Seus prêmios são creditados automaticamente na sua conta') },
-          ].map((step, i) => (
-            <div key={i} className="text-center p-6 rounded-2xl bg-dark-900/30 border border-white/5">
-              <div className="text-3xl mb-3">{step.icon}</div>
-              <h3 className="text-white font-bold text-sm mb-1.5">{step.title}</h3>
-              <p className="text-dark-400 text-xs leading-relaxed">{step.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ============ TRUST BADGES ============ */}
-      <section className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { icon: <Shield size={20} />, label: t('home.trust1', 'Seguro & Confiável'), color: 'text-green-400' },
-            { icon: <CreditCard size={20} />, label: t('home.trust2', 'PIX & Cartão'), color: 'text-blue-400' },
-            { icon: <Zap size={20} />, label: t('home.trust3', 'Pagamento Instantâneo'), color: 'text-yellow-400' },
-            { icon: <Trophy size={20} />, label: t('home.trust4', 'Prêmios Reais'), color: 'text-orange-400' },
-          ].map((badge, i) => (
-            <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-dark-900/30 border border-white/5">
-              <div className={badge.color}>{badge.icon}</div>
-              <span className="text-dark-300 text-xs font-semibold">{badge.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+        )}
+      </div>
     </div>
   )
 }

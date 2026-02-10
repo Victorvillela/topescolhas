@@ -41,7 +41,7 @@ export default function LotteryPage() {
     if (!slug) return
 
     // Buscar último resultado
-    fetch('/api/cron/results')
+    fetch('/api/results')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.results) {

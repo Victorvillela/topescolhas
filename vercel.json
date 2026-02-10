@@ -1,12 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/results",
-      "schedule": "0 23 * * *"
+      "path": "/api/results?sync=true",
+      "schedule": "0 */2 * * *"
     },
     {
-      "path": "/api/cron/results",
-      "schedule": "30 2 * * *"
+      "path": "/api/jackpots",
+      "schedule": "30 */1 * * *"
     }
   ]
 }

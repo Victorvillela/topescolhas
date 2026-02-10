@@ -147,7 +147,7 @@ export default function ResultadosPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">
-            🎲 {t.results?.title || 'Resultados'}
+            🎲 {t.results.title}
           </h1>
           <button
             onClick={fetchResults}
@@ -155,7 +155,7 @@ export default function ResultadosPage() {
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {t.results?.refresh || 'Atualizar'}
+            Atualizar
           </button>
         </div>
 
@@ -171,9 +171,9 @@ export default function ResultadosPage() {
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {f === 'all' ? `🌍 ${t.results?.all || 'Todas'}` :
-               f === 'br' ? `🇧🇷 ${t.results?.brazilian || 'Brasileiras'}` :
-               `🌎 ${t.results?.international || 'Internacionais'}`}
+              {f === 'all' ? `🌍 ${t.results.all}` :
+               f === 'br' ? `🇧🇷 ${t.results.brazilian}` :
+               `🌎 ${t.results.international}`}
             </button>
           ))}
         </div>
@@ -181,7 +181,7 @@ export default function ResultadosPage() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-            <span className="ml-3 text-gray-400">{t.results?.loading || 'Carregando resultados...'}</span>
+            <span className="ml-3 text-gray-400">Carregando resultados...</span>
           </div>
         )}
 
@@ -189,7 +189,7 @@ export default function ResultadosPage() {
           <div className="text-center py-20 text-red-400">
             <p>{error}</p>
             <button onClick={fetchResults} className="mt-4 px-6 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700">
-              {t.results?.tryAgain || 'Tentar novamente'}
+              Tentar novamente
             </button>
           </div>
         )}
@@ -254,7 +254,7 @@ export default function ResultadosPage() {
 
         {!loading && !error && sorted.length === 0 && (
           <div className="text-center py-20 text-gray-500">
-            <p>{t.results?.noResults || 'Nenhum resultado encontrado.'}</p>
+            <p>Nenhum resultado encontrado.</p>
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ import { Clock, ArrowRight } from 'lucide-react'
 interface LotteryCardProps {
   lottery: Lottery
   featured?: boolean
-  /** Jackpot real da API (substitui lottery.jackpot quando disponível) */
+  /** Jackpot real da API (substitui lottery.jackpotStart quando disponível) */
   jackpotOverride?: string
   /** Data do próximo sorteio da API (ISO string) */
   nextDrawOverride?: string
@@ -18,10 +18,9 @@ export function LotteryCard({ lottery, featured = false, jackpotOverride, nextDr
   const [cd, setCd] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
 
   useEffect(() => {
-    // Se temos data da API, usa ela; senão calcula do schedule
     const next = nextDrawOverride
       ? new Date(nextDrawOverride)
-      : getNextDraw(lottery.drawSchedule, lottery.drawHour)
+      : getNextDraw(lottery.drawDays, lottery.drawTime)
     const tick = () => setCd(getCountdown(next))
     tick()
     const iv = setInterval(tick, 1000)
@@ -29,7 +28,7 @@ export function LotteryCard({ lottery, featured = false, jackpotOverride, nextDr
   }, [lottery, nextDrawOverride])
 
   // Usa jackpot real da API se disponível, senão usa o estático
-  const displayJackpot = jackpotOverride || lottery.jackpot
+  const displayJackpot = jackpotOverride || lottery.jackpotStart
 
   // Indicador visual se o jackpot é real (da API)
   const isRealJackpot = !!jackpotOverride
@@ -47,7 +46,7 @@ export function LotteryCard({ lottery, featured = false, jackpotOverride, nextDr
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
             style={{ background: lottery.gradient }}>
-            {lottery.logo}
+            {lottery.emoji}
           </div>
           <div>
             <div className="text-xs text-gray-500">{lottery.flag} {lottery.country}</div>
@@ -85,7 +84,7 @@ export function LotteryCard({ lottery, featured = false, jackpotOverride, nextDr
         {/* Info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-[11px] text-gray-500">
-            <span>💰 A partir de {lottery.currency} {lottery.price.toFixed(2)}</span>
+            <span>💰 A partir de {lottery.currency === 'BRL' ? 'R$' : lottery.currency} {lottery.pricePerBet.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1 text-xs font-bold group-hover:text-amber-400 transition-colors"
             style={{ color: lottery.color }}>

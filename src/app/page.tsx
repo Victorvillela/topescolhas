@@ -48,7 +48,6 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'Romênia': '🇷🇴',
 }
 
-// ⚠️ Removidos: la-primitiva, el-gordo, oz-lotto, powerball-au, german-lotto
 const SLUG_GRADIENTS: Record<string, string> = {
   'eurojackpot': 'linear-gradient(135deg, #f59e0b, #d97706)',
   'euromilhoes': 'linear-gradient(135deg, #fbbf24, #f59e0b)',
@@ -59,16 +58,16 @@ const SLUG_GRADIENTS: Record<string, string> = {
   'bonoloto': 'linear-gradient(135deg, #ea580c, #c2410c)',
   'saturday-lotto': 'linear-gradient(135deg, #0284c7, #0369a1)',
   'austria-lotto': 'linear-gradient(135deg, #ef4444, #dc2626)',
-  'polish-lotto': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'pl-lotto': 'linear-gradient(135deg, #dc2626, #991b1b)',
   'totoloto': 'linear-gradient(135deg, #059669, #047857)',
   'lotto-649': 'linear-gradient(135deg, #dc2626, #991b1b)',
-  'sa-lotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
-  'sa-powerball': 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-  'sa-daily-lotto': 'linear-gradient(135deg, #10b981, #059669)',
+  'za-lotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
+  'za-powerball': 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+  'za-dailylotto': 'linear-gradient(135deg, #10b981, #059669)',
   'hatoslotto': 'linear-gradient(135deg, #dc2626, #059669)',
   'otoslotto': 'linear-gradient(135deg, #059669, #047857)',
-  'ph-ultra-lotto': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-  'ph-grand-lotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
+  'ph-ultralotto': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  'ph-grandlotto': 'linear-gradient(135deg, #f59e0b, #d97706)',
 }
 
 const COUNTRY_GRADIENTS: Record<string, string> = {
@@ -148,7 +147,7 @@ export default function ResultadosPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">
-            🎲 {t('results.title', 'Resultados')}
+            🎲 {t.results?.title || 'Resultados'}
           </h1>
           <button
             onClick={fetchResults}
@@ -156,7 +155,7 @@ export default function ResultadosPage() {
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {t('results.refresh', 'Atualizar')}
+            {t.results?.refresh || 'Atualizar'}
           </button>
         </div>
 
@@ -172,9 +171,9 @@ export default function ResultadosPage() {
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {f === 'all' ? `🌍 ${t('results.all', 'Todas')}` :
-               f === 'br' ? `🇧🇷 ${t('results.brazilian', 'Brasileiras')}` :
-               `🌎 ${t('results.international', 'Internacionais')}`}
+              {f === 'all' ? `🌍 ${t.results?.all || 'Todas'}` :
+               f === 'br' ? `🇧🇷 ${t.results?.brazilian || 'Brasileiras'}` :
+               `🌎 ${t.results?.international || 'Internacionais'}`}
             </button>
           ))}
         </div>
@@ -182,7 +181,7 @@ export default function ResultadosPage() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-            <span className="ml-3 text-gray-400">{t('results.loading', 'Carregando resultados...')}</span>
+            <span className="ml-3 text-gray-400">{t.results?.loading || 'Carregando resultados...'}</span>
           </div>
         )}
 
@@ -190,7 +189,7 @@ export default function ResultadosPage() {
           <div className="text-center py-20 text-red-400">
             <p>{error}</p>
             <button onClick={fetchResults} className="mt-4 px-6 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700">
-              {t('results.tryAgain', 'Tentar novamente')}
+              {t.results?.tryAgain || 'Tentar novamente'}
             </button>
           </div>
         )}
@@ -255,7 +254,7 @@ export default function ResultadosPage() {
 
         {!loading && !error && sorted.length === 0 && (
           <div className="text-center py-20 text-gray-500">
-            <p>{t('results.noResults', 'Nenhum resultado encontrado.')}</p>
+            <p>{t.results?.noResults || 'Nenhum resultado encontrado.'}</p>
           </div>
         )}
       </div>

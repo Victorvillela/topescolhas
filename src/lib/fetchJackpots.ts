@@ -1,25 +1,45 @@
 // ============================================
 // BUSCA JACKPOTS REAIS DE TODAS AS LOTERIAS
-// Fontes: Guidi API (BR), Lottoland Media API (INT)
-// Todas as APIs são GRATUITAS e sem autenticação
-//
-// REMOVIDAS (API Lottoland não retorna dados):
-// - La Primitiva, El Gordo, Oz Lotto, Powerball AU, German Lotto
+// Fontes: Guidi API (BR), Lottoland (INT), NY Open Data (US)
 // ============================================
 
 export interface JackpotData {
   slug: string
   jackpot: string          // Valor formatado: "R$ 47.000.000", "US$ 137.000.000"
   jackpotRaw?: number      // Valor numérico (para ordenação)
-  nextDraw?: string        // Data do próximo sorteio (ISO)
+  nextDraw?: string        // ISO date
   source: 'api' | 'fallback'
 }
 
 // ============================================
-// MAPEAMENTO GUIDI: slug → apiName
-// api.guidi.dev.br/loteria/{apiName}/ultimo
+// MAPEAMENTO: slug → fonte de dados
 // ============================================
 
+// Lottoland API: media.lottoland.com/api/drawings/{name}
+// Retorna: { next: { jackpot: "22", currency: "EUR" } }
+const LOTTOLAND_MAP: Record<string, { apiName: string; currency: string; symbol: string; locale: string }> = {
+  'mega-millions':    { apiName: 'usMegaMillions',  currency: 'USD', symbol: 'US$', locale: 'en-US' },
+  'powerball':        { apiName: 'usPowerball',     currency: 'USD', symbol: 'US$', locale: 'en-US' },
+  'euromilhoes':      { apiName: 'euroMillions',    currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'eurojackpot':      { apiName: 'euroJackpot',     currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'superenalotto':    { apiName: 'superEnalotto',   currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'france-loto':      { apiName: 'frenchLoto',      currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'uk-lotto':         { apiName: 'ukLotto',         currency: 'GBP', symbol: '£',   locale: 'en-GB' },
+  'irish-lotto':      { apiName: 'irishLotto',      currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'la-primitiva':     { apiName: 'laPrimitiva',     currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'el-gordo':         { apiName: 'elGordo',         currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'bonoloto':         { apiName: 'bonoloto',        currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'oz-lotto':         { apiName: 'ozLotto',         currency: 'AUD', symbol: 'A$',  locale: 'en-AU' },
+  'au-powerball':     { apiName: 'powerballAu',     currency: 'AUD', symbol: 'A$',  locale: 'en-AU' },
+  'saturday-lotto':   { apiName: 'saturdayLotto',   currency: 'AUD', symbol: 'A$',  locale: 'en-AU' },
+  'austria-lotto':    { apiName: 'austriaLotto',    currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'german-lotto':     { apiName: 'lotto6aus49',     currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'pl-lotto':         { apiName: 'polishLotto',     currency: 'PLN', symbol: 'zł',  locale: 'pl-PL' },
+  'totoloto':         { apiName: 'totoloto',        currency: 'EUR', symbol: '€',   locale: 'de-DE' },
+  'lotto-649':        { apiName: 'canadaLotto649',  currency: 'CAD', symbol: 'CA$', locale: 'en-CA' },
+}
+
+// Brasileiras: api.guidi.dev.br/loteria/{name}/ultimo
 const GUIDI_MAP: Record<string, string> = {
   'mega-sena':    'megasena',
   'lotofacil':    'lotofacil',
@@ -31,145 +51,135 @@ const GUIDI_MAP: Record<string, string> = {
 }
 
 // ============================================
-// MAPEAMENTO LOTTOLAND: slug → config
-// media.lottoland.com/api/drawings/{apiName}
-// Retorna: { next: { jackpot: "22", currency: "EUR" } }
-// jackpot vem em milhões (ex: "22" = €22.000.000)
+// BUSCA LOTTOLAND (Internacional)
 // ============================================
 
-interface LottolandConfig {
+async function fetchLottolandJackpot(
+  slug: string,
+  config: typeof LOTTOLAND_MAP[string]
+): Promise<JackpotData | null> {
+  try {
+    const res = await fetch(
+      `https://media.lottoland.com/api/drawings/${config.apiName}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+        next: { revalidate: 0 },
+        signal: AbortSignal.timeout(8000),
+      }
+    )
+
+    if (!res.ok) return null
+
+    const data = await res.json()
+
+    // next.jackpot vem em milhões (ex: "22" = 22 milhões)
+    // next.marketingJackpot pode ter valor mais preciso
+    const nextJackpot = data?.next?.jackpot || data?.next?.marketingJackpot
+    if (!nextJackpot) return null
+
+    const jackpotMillions = parseFloat(nextJackpot)
+    if (isNaN(jackpotMillions) || jackpotMillions <= 0) return null
+
+    const jackpotValue = jackpotMillions * 1_000_000
+
+    // Formata o valor
+    const formatted = formatJackpot(jackpotValue, config.symbol, config.locale)
+
+    // Data do próximo sorteio
+    let nextDraw: string | undefined
+    if (data?.next?.date) {
+      const d = data.next.date
+      if (d.year && d.month && d.day) {
+        nextDraw = `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
+        if (d.hour !== undefined) {
+          nextDraw += `T${String(d.hour).padStart(2, '0')}:${String(d.minute || 0).padStart(2, '0')}:00`
+        }
+      }
+    }
+
+    return {
+      slug,
+      jackpot: formatted,
+      jackpotRaw: jackpotValue,
+      nextDraw,
+      source: 'api',
+    }
+  } catch (err) {
+    console.error(`[Lottoland] ${slug}:`, err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+// ============================================
+// BUSCA BRASILEIRAS (Guidi API)
+// ============================================
+
+async function fetchGuidiJackpot(
+  slug: string,
   apiName: string
-  currency: string
-  symbol: string
-  locale: string
-  multiplier?: number
-}
-
-const LOTTOLAND_MAP: Record<string, LottolandConfig> = {
-  // 🇺🇸 EUA
-  'mega-millions':     { apiName: 'usMegaMillions',     currency: 'USD', symbol: 'US$', locale: 'en-US' },
-  'powerball':         { apiName: 'usPowerball',        currency: 'USD', symbol: 'US$', locale: 'en-US' },
-
-  // 🇪🇺 Europa Multi-país
-  'euromilhoes':       { apiName: 'euroMillions',       currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-  'eurojackpot':       { apiName: 'euroJackpot',        currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇮🇹 Itália
-  'superenalotto':     { apiName: 'superEnalotto',      currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇫🇷 França
-  'france-loto':       { apiName: 'frenchLoto',         currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇬🇧 Reino Unido
-  'uk-lotto':          { apiName: 'ukLotto',            currency: 'GBP', symbol: '£',   locale: 'en-GB' },
-
-  // 🇮🇪 Irlanda
-  'irish-lotto':       { apiName: 'irishLotto',         currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇪🇸 Espanha — REMOVIDAS: la-primitiva, el-gordo (API não retorna)
-  'bonoloto':          { apiName: 'bonoloto',           currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇦🇺 Austrália — REMOVIDAS: oz-lotto, au-powerball (API não retorna)
-  'saturday-lotto':    { apiName: 'saturdayLotto',      currency: 'AUD', symbol: 'A$',  locale: 'en-AU' },
-
-  // 🇦🇹 Áustria
-  'austria-lotto':     { apiName: 'austriaLotto',       currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇩🇪 Alemanha — REMOVIDA: german-lotto (API não retorna)
-
-  // 🇵🇱 Polônia
-  'polish-lotto':      { apiName: 'polishLotto',        currency: 'PLN', symbol: 'zł',  locale: 'pl-PL' },
-
-  // 🇵🇹 Portugal
-  'totoloto':          { apiName: 'totoloto',           currency: 'EUR', symbol: '€',   locale: 'de-DE' },
-
-  // 🇨🇦 Canadá
-  'lotto-649':         { apiName: 'lotto649',           currency: 'CAD', symbol: 'C$',  locale: 'en-CA' },
-
-  // 🇿🇦 África do Sul
-  'sa-lotto':          { apiName: 'saLotto',            currency: 'ZAR', symbol: 'R',   locale: 'en-ZA' },
-  'sa-powerball':      { apiName: 'saPowerball',        currency: 'ZAR', symbol: 'R',   locale: 'en-ZA' },
-  'sa-daily-lotto':    { apiName: 'saDailyLotto',       currency: 'ZAR', symbol: 'R',   locale: 'en-ZA' },
-
-  // 🇭🇺 Hungria
-  'hatoslotto':        { apiName: 'hatoslotto',         currency: 'HUF', symbol: 'Ft',  locale: 'hu-HU' },
-  'otoslotto':         { apiName: 'otoslotto',          currency: 'HUF', symbol: 'Ft',  locale: 'hu-HU' },
-
-  // 🇵🇭 Filipinas
-  'ph-ultra-lotto':    { apiName: 'phUltraLotto',       currency: 'PHP', symbol: '₱',   locale: 'en-PH' },
-  'ph-grand-lotto':    { apiName: 'phGrandLotto',       currency: 'PHP', symbol: '₱',   locale: 'en-PH' },
-}
-
-// ============================================
-// FETCH: Guidi (BR)
-// ============================================
-
-async function fetchGuidiJackpot(slug: string, apiName: string): Promise<JackpotData | null> {
+): Promise<JackpotData | null> {
   try {
-    const res = await fetch(`https://api.guidi.dev.br/loteria/${apiName}/ultimo`, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 0 },
-    })
+    const res = await fetch(
+      `https://api.guidi.dev.br/loteria/${apiName}/ultimo`,
+      {
+        headers: { 'Accept': 'application/json' },
+        next: { revalidate: 0 },
+        signal: AbortSignal.timeout(10000),
+      }
+    )
+
     if (!res.ok) return null
+
     const data = await res.json()
 
-    let jackpotRaw = 0
-    if (data.valorEstimadoProximoConcurso) {
-      jackpotRaw = Number(data.valorEstimadoProximoConcurso)
-    } else if (data.valorAcumuladoProximoConcurso) {
-      jackpotRaw = Number(data.valorAcumuladoProximoConcurso)
+    // Próximo prêmio estimado
+    let jackpotValue =
+      data.valorEstimadoProximoConcurso ||
+      data.valorAcumuladoProximoConcurso ||
+      data.valorAcumuladoConcursoEspecial ||
+      0
+
+    if (jackpotValue <= 0) {
+      // Se não tem estimativa, usa o valor acumulado
+      if (data.valorAcumuladoConcurso_0_5) {
+        jackpotValue = data.valorAcumuladoConcurso_0_5
+      } else if (data.acumulado) {
+        // Tenta extrair de outro campo
+        jackpotValue = data.valorAcumulado || 0
+      }
     }
 
-    if (!jackpotRaw || isNaN(jackpotRaw)) return null
+    if (jackpotValue <= 0) return null
+
+    const formatted = `R$ ${formatBRL(jackpotValue)}`
+
+    // Próximo sorteio
+    let nextDraw: string | undefined
+    if (data.dataProximoConcurso) {
+      const parts = data.dataProximoConcurso.split('/')
+      if (parts.length === 3) {
+        nextDraw = `${parts[2]}-${parts[1]}-${parts[0]}T20:00:00`
+      }
+    }
 
     return {
       slug,
-      jackpot: `R$ ${formatBRL(jackpotRaw)}`,
-      jackpotRaw,
+      jackpot: formatted,
+      jackpotRaw: jackpotValue,
+      nextDraw,
       source: 'api',
     }
-  } catch { return null }
+  } catch (err) {
+    console.error(`[Guidi] ${slug}:`, err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
 // ============================================
-// FETCH: Lottoland (INT)
-// ============================================
-
-async function fetchLottolandJackpot(slug: string, config: LottolandConfig): Promise<JackpotData | null> {
-  try {
-    const res = await fetch(`https://media.lottoland.com/api/drawings/${config.apiName}`, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 0 },
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-
-    if (!data?.next?.jackpot) return null
-
-    const rawStr = String(data.next.jackpot)
-    let jackpotRaw = parseFloat(rawStr.replace(/,/g, ''))
-
-    // Lottoland retorna em milhões para muitas loterias
-    if (jackpotRaw < 10000) {
-      jackpotRaw = jackpotRaw * 1_000_000
-    }
-
-    if (!jackpotRaw || isNaN(jackpotRaw)) return null
-
-    const multiplier = config.multiplier || 1
-    jackpotRaw = jackpotRaw * multiplier
-
-    return {
-      slug,
-      jackpot: formatJackpot(jackpotRaw, config.symbol, config.locale),
-      jackpotRaw,
-      source: 'api',
-    }
-  } catch { return null }
-}
-
-// ============================================
-// FETCH ALL
+// BUSCAR TODOS OS JACKPOTS
 // ============================================
 
 export async function fetchAllJackpots(): Promise<JackpotData[]> {
@@ -185,7 +195,7 @@ export async function fetchAllJackpots(): Promise<JackpotData[]> {
       console.log(`  ✅ ${slug}: ${result.jackpot}`)
     } else {
       errors.push(slug)
-      console.log(`  ❌ ${slug}: sem dados`)
+      console.log(`  ❌ ${slug}`)
     }
   })
 
@@ -198,33 +208,36 @@ export async function fetchAllJackpots(): Promise<JackpotData[]> {
       console.log(`  ✅ ${slug}: ${result.jackpot}`)
     } else {
       errors.push(slug)
-      console.log(`  ❌ ${slug}: sem dados`)
+      console.log(`  ❌ ${slug}`)
     }
   })
 
   // Executa tudo em paralelo
   await Promise.all([...brPromises, ...intPromises])
 
-  console.log(`\n📊 Jackpots obtidos: ${results.length}/${Object.keys(GUIDI_MAP).length + Object.keys(LOTTOLAND_MAP).length}`)
+  console.log(`\n📊 Jackpots obtidos: ${results.length}`)
   if (errors.length > 0) console.log(`⚠️ Sem dados: ${errors.join(', ')}`)
 
   return results
 }
 
 // ============================================
-// HELPERS DE FORMATAÇÃO
+// HELPERS
 // ============================================
 
 function formatBRL(value: number): string {
   if (!value || isNaN(value)) return '—'
+  // Formata sem decimais, com separador de milhares
   return Math.round(value).toLocaleString('pt-BR')
 }
 
 function formatJackpot(value: number, symbol: string, locale: string): string {
   if (!value || isNaN(value)) return `${symbol} —`
 
+  // Para valores em milhões, formata de forma limpa
   if (value >= 1_000_000) {
     const millions = Math.round(value / 1_000_000)
+    // Formata com separador de milhares: 137.000.000
     const formatted = (millions * 1_000_000).toLocaleString('pt-BR')
     return `${symbol} ${formatted}`
   }

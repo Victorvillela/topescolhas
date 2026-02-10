@@ -118,7 +118,7 @@ export default function ResultadosPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/cron/results')
+      const res = await fetch('/api/results')
       if (!res.ok) throw new Error('Erro ao buscar resultados')
       const data = await res.json()
       setResults(data.results || [])

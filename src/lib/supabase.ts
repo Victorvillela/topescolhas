@@ -1,9 +1,5 @@
 // ============================================
 // CLIENTE SUPABASE
-// Variáveis de ambiente necessárias:
-// NEXT_PUBLIC_SUPABASE_URL
-// NEXT_PUBLIC_SUPABASE_ANON_KEY
-// SUPABASE_SERVICE_ROLE_KEY (opcional, para server)
 // ============================================
 
 import { createClient } from '@supabase/supabase-js'
@@ -17,6 +13,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Cliente server-side com service role key (para webhooks, cron, etc.)
 export function createServerClient() {
   return createClient(supabaseUrl, supabaseServiceKey)
+}
+
+// Tipo do usuário no banco
+export interface DbUser {
+  id: string
+  email: string
+  name?: string
+  avatar_url?: string
+  balance?: number
+  created_at?: string
+  updated_at?: string
 }
 
 export default supabase

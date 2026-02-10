@@ -1,47 +1,21 @@
 // ============================================
-// CLIENTE SUPABASE (lazy — não quebra sem env vars)
+// CLIENTE SUPABASE (desativado por enquanto)
+// Usa URL placeholder pra nunca crashar.
+// Quando quiser ativar, configure as env vars no Vercel.
 // ============================================
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
 
-// Cria o cliente apenas se as variáveis existirem
-let _supabase: SupabaseClient | null = null
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-function getSupabase(): SupabaseClient | null {
-  if (!supabaseUrl || !supabaseAnonKey) return null
-  if (!_supabase) {
-    _supabase = createClient(supabaseUrl, supabaseAnonKey)
-  }
-  return _supabase
-}
-
-// Proxy que não quebra quando Supabase não está configurado
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const client = getSupabase()
-    if (!client) {
-      // Retorna funções no-op pra não crashar
-      return typeof prop === 'string' ? (..._args: unknown[]) => ({
-        data: null,
-        error: { message: 'Supabase not configured' },
-        select: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      }) : undefined
-    }
-    return (client as Record<string | symbol, unknown>)[prop]
-  },
-})
-
-// Cliente server-side
-export function createServerClient(): SupabaseClient | null {
-  if (!supabaseUrl || !supabaseServiceKey) return null
+export function createServerClient() {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
-// Tipo do usuário no banco
 export interface DbUser {
   id: string
   email: string

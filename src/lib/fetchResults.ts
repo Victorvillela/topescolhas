@@ -157,7 +157,6 @@ interface LottolandConfig {
 }
 
 // ⚠️ REMOVIDAS: La Primitiva, El Gordo, Oz Lotto, Powerball AU, German Lotto
-// Essas APIs não retornam dados válidos consistentemente
 
 const LOTTOLAND_LOTTERIES: LottolandConfig[] = [
   // 🇬🇧 Reino Unido
@@ -176,17 +175,17 @@ const LOTTOLAND_LOTTERIES: LottolandConfig[] = [
   // 🇮🇹 Itália
   { slug: 'superenalotto', api: 'superEnalotto', name: 'SuperEnalotto', country: 'Itália', currency: '€', hasExtras: true, extrasField: 'jolly' },
 
-  // 🇪🇸 Espanha (apenas BonoLoto — La Primitiva e El Gordo removidas)
+  // 🇪🇸 Espanha
   { slug: 'bonoloto', api: 'bonoloto', name: 'BonoLoto', country: 'Espanha', currency: '€', hasExtras: true, extrasField: 'complementario' },
 
-  // 🇦🇺 Austrália (apenas Saturday Lotto — Oz Lotto e Powerball AU removidas)
+  // 🇦🇺 Austrália
   { slug: 'saturday-lotto', api: 'saturdayLotto', name: 'Saturday Lotto', country: 'Austrália', currency: 'A$', hasExtras: true, extrasField: 'bonusBalls' },
 
   // 🇦🇹 Áustria
   { slug: 'austria-lotto', api: 'austriaLotto', name: 'Austria Lotto', country: 'Áustria', currency: '€', hasExtras: false, extrasField: '' },
 
-  // 🇵🇱 Polônia
-  { slug: 'polish-lotto', api: 'polishLotto', name: 'Polish Lotto', country: 'Polônia', currency: 'zł', hasExtras: false, extrasField: '' },
+  // 🇵🇱 Polônia — slug alinhado com lotteries.ts
+  { slug: 'pl-lotto', api: 'polishLotto', name: 'Polish Lotto', country: 'Polônia', currency: 'zł', hasExtras: false, extrasField: '' },
 
   // 🇵🇹 Portugal
   { slug: 'totoloto', api: 'totoloto', name: 'Totoloto', country: 'Portugal', currency: '€', hasExtras: false, extrasField: '' },
@@ -194,18 +193,18 @@ const LOTTOLAND_LOTTERIES: LottolandConfig[] = [
   // 🇨🇦 Canadá
   { slug: 'lotto-649', api: 'lotto649', name: 'Lotto 6/49', country: 'Canadá', currency: 'C$', hasExtras: false, extrasField: '' },
 
-  // 🇿🇦 África do Sul
-  { slug: 'sa-lotto', api: 'saLotto', name: 'SA Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
-  { slug: 'sa-powerball', api: 'saPowerball', name: 'SA Powerball', country: 'África do Sul', currency: 'R', hasExtras: true, extrasField: 'bonusBalls' },
-  { slug: 'sa-daily-lotto', api: 'saDailyLotto', name: 'SA Daily Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
+  // 🇿🇦 África do Sul — slugs alinhados com lotteries.ts
+  { slug: 'za-lotto', api: 'saLotto', name: 'SA Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
+  { slug: 'za-powerball', api: 'saPowerball', name: 'SA Powerball', country: 'África do Sul', currency: 'R', hasExtras: true, extrasField: 'bonusBalls' },
+  { slug: 'za-dailylotto', api: 'saDailyLotto', name: 'SA Daily Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
 
   // 🇭🇺 Hungria
   { slug: 'hatoslotto', api: 'hatoslotto', name: 'HatosLottó', country: 'Hungria', currency: 'Ft', hasExtras: false, extrasField: '' },
   { slug: 'otoslotto', api: 'otoslotto', name: 'ÖtösLottó', country: 'Hungria', currency: 'Ft', hasExtras: false, extrasField: '' },
 
-  // 🇵🇭 Filipinas
-  { slug: 'ph-ultra-lotto', api: 'phUltraLotto', name: 'Ultra Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
-  { slug: 'ph-grand-lotto', api: 'phGrandLotto', name: 'Grand Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
+  // 🇵🇭 Filipinas — slugs alinhados com lotteries.ts
+  { slug: 'ph-ultralotto', api: 'phUltraLotto', name: 'Ultra Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
+  { slug: 'ph-grandlotto', api: 'phGrandLotto', name: 'Grand Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
 ]
 
 async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResult | null> {

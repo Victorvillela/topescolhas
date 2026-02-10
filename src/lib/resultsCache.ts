@@ -11,9 +11,6 @@ interface CacheData {
 
 let cache: CacheData | null = null
 
-// Cache válido por 4 horas (em ms)
-const CACHE_TTL = 4 * 60 * 60 * 1000
-
 export function setCachedResults(results: LotteryResult[]): void {
   cache = {
     results,
@@ -21,14 +18,24 @@ export function setCachedResults(results: LotteryResult[]): void {
   }
 }
 
-export function getCachedResults(): CacheData | null {
-  return cache
+export function getCachedResults(): { results: LotteryResult[]; age: number; updatedAt: string } {
+  if (!cache) {
+    return { results: [], age: Infinity, updatedAt: '' }
+  }
+  const ageMs = Date.now() - new Date(cache.updatedAt).getTime()
+  const ageMinutes = Math.round(ageMs / 60000)
+  return {
+    results: cache.results,
+    age: ageMinutes,
+    updatedAt: cache.updatedAt,
+  }
 }
 
-export function isCacheValid(): boolean {
+export function isCacheValid(maxAgeMinutes?: number): boolean {
   if (!cache) return false
-  const age = Date.now() - new Date(cache.updatedAt).getTime()
-  return age < CACHE_TTL
+  const ageMs = Date.now() - new Date(cache.updatedAt).getTime()
+  const ttl = (maxAgeMinutes || 240) * 60 * 1000
+  return ageMs < ttl
 }
 
 export function clearResultsCache(): void {

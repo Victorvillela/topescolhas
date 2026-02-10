@@ -126,8 +126,8 @@ async function fetchUSLotteries(): Promise<LotteryResult[]> {
 
 // ============================================
 // 3. LOTERIAS INTERNACIONAIS - Lottoland API
-// Endpoint: lottoland.com/api/drawings/{name}
-// Gratuita, sem autenticação, funciona globalmente
+// URL CORRIGIDA: media.lottoland.com (não www)
+// Gratuita, sem autenticação
 // ============================================
 
 interface LottolandConfig {
@@ -140,38 +140,89 @@ interface LottolandConfig {
   extrasField: string
 }
 
+// API names confirmados que funcionam no media.lottoland.com:
+// ✅ euroJackpot, euroMillions, superEnalotto, frenchLoto,
+//    ukLotto, irishLotto
+// 🔧 Corrigidos: lotto6aus49, powerballAu, ozLotto,
+//    elGordoPrimitive, laPrimitiva
 const LOTTOLAND_LOTTERIES: LottolandConfig[] = [
-  { slug: 'eurojackpot', api: 'euroJackpot', name: 'EuroJackpot', country: 'Europa', currency: '€', hasExtras: true, extrasField: 'euroNumbers' },
-  { slug: 'euromilhoes', api: 'euroMillions', name: 'EuroMilhões', country: 'Europa', currency: '€', hasExtras: true, extrasField: 'starNumbers' },
-  { slug: 'superenalotto', api: 'superEnalotto', name: 'SuperEnalotto', country: 'Itália', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'loto-franca', api: 'frenchLotto', name: 'Loto', country: 'França', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'uk-lotto', api: 'ukLotto', name: 'UK Lotto', country: 'Reino Unido', currency: '£', hasExtras: false, extrasField: '' },
-  { slug: 'german-lotto', api: 'germanLotto', name: 'German Lotto', country: 'Alemanha', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'irish-lotto', api: 'irishLotto', name: 'Irish Lotto', country: 'Irlanda', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'la-primitiva', api: 'laPrimitiva', name: 'La Primitiva', country: 'Espanha', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'el-gordo', api: 'elGordo', name: 'El Gordo', country: 'Espanha', currency: '€', hasExtras: false, extrasField: '' },
-  { slug: 'oz-lotto', api: 'ozLotto', name: 'Oz Lotto', country: 'Austrália', currency: 'A$', hasExtras: false, extrasField: '' },
-  { slug: 'powerball-au', api: 'powerBallAU', name: 'Powerball AU', country: 'Austrália', currency: 'A$', hasExtras: false, extrasField: '' },
+  // ✅ Funcionando
+  { slug: 'eurojackpot',   api: 'euroJackpot',     name: 'EuroJackpot',   country: 'Europa',      currency: '€', hasExtras: true,  extrasField: 'euroNumbers' },
+  { slug: 'euromilhoes',   api: 'euroMillions',     name: 'EuroMilhões',   country: 'Europa',      currency: '€', hasExtras: true,  extrasField: 'starNumbers' },
+  { slug: 'superenalotto', api: 'superEnalotto',    name: 'SuperEnalotto',  country: 'Itália',      currency: '€', hasExtras: false, extrasField: '' },
+  { slug: 'france-loto',   api: 'frenchLoto',       name: 'Loto',          country: 'França',      currency: '€', hasExtras: false, extrasField: '' },
+  { slug: 'uk-lotto',      api: 'ukLotto',          name: 'UK Lotto',      country: 'Reino Unido', currency: '£', hasExtras: false, extrasField: '' },
+  { slug: 'irish-lotto',   api: 'irishLotto',       name: 'Irish Lotto',   country: 'Irlanda',     currency: '€', hasExtras: false, extrasField: '' },
+
+  // 🔧 Corrigidos - API names atualizados
+  { slug: 'german-lotto',  api: 'lotto6aus49',      name: 'German Lotto',  country: 'Alemanha',    currency: '€', hasExtras: false, extrasField: '' },
+  { slug: 'la-primitiva',  api: 'laPrimitiva',      name: 'La Primitiva',  country: 'Espanha',     currency: '€', hasExtras: false, extrasField: '' },
+  { slug: 'el-gordo',      api: 'elGordoPrimitive',  name: 'El Gordo',      country: 'Espanha',     currency: '€', hasExtras: false, extrasField: '' },
+  { slug: 'oz-lotto',      api: 'ozLotto',          name: 'Oz Lotto',      country: 'Austrália',   currency: 'A$', hasExtras: false, extrasField: '' },
+  { slug: 'au-powerball',  api: 'powerballAu',      name: 'Powerball AU',  country: 'Austrália',   currency: 'A$', hasExtras: false, extrasField: '' },
 ]
 
+// Nomes alternativos para tentar se o principal falhar
+const API_FALLBACK_NAMES: Record<string, string[]> = {
+  'lotto6aus49':      ['germanLotto', 'german6aus49'],
+  'elGordoPrimitive': ['elGordo', 'elGordoSpanish'],
+  'laPrimitiva':      ['laprimitiva', 'primitiva'],
+  'ozLotto':          ['ozLotteries', 'australianOzLotto'],
+  'powerballAu':      ['powerBallAU', 'australianPowerball'],
+}
+
 async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResult | null> {
+  // Tenta o nome principal primeiro
+  const result = await tryFetchLottoland(lot, lot.api)
+  if (result) return result
+
+  // Se falhou, tenta nomes alternativos
+  const fallbacks = API_FALLBACK_NAMES[lot.api]
+  if (fallbacks) {
+    for (const altApi of fallbacks) {
+      const altResult = await tryFetchLottoland(lot, altApi)
+      if (altResult) {
+        console.log(`    → Funcionou com nome alternativo: ${altApi}`)
+        return altResult
+      }
+    }
+  }
+
+  return null
+}
+
+async function tryFetchLottoland(lot: LottolandConfig, apiName: string): Promise<LotteryResult | null> {
   try {
-    const res = await fetch(`https://www.lottoland.com/api/drawings/${lot.api}`, {
+    // URL CORRIGIDA: media.lottoland.com em vez de www.lottoland.com
+    const res = await fetch(`https://media.lottoland.com/api/drawings/${apiName}`, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
       next: { revalidate: 0 },
+      signal: AbortSignal.timeout(10000),
     })
-    if (!res.ok) return null
+
+    if (!res.ok) {
+      console.log(`    [${apiName}] HTTP ${res.status}`)
+      return null
+    }
+
     const data = await res.json()
 
-    if (!data?.last) return null
+    if (!data?.last) {
+      console.log(`    [${apiName}] Sem dados 'last' na resposta`)
+      return null
+    }
+
     const last = data.last
 
     // Números principais
     const numbers = (last.numbers || []).map((n: number) => n).sort((a: number, b: number) => a - b)
-    if (numbers.length === 0) return null
+    if (numbers.length === 0) {
+      console.log(`    [${apiName}] Sem números na resposta`)
+      return null
+    }
 
     // Números extras (EuroJackpot = euroNumbers, EuroMillions = starNumbers)
     let extras: number[] = []
@@ -188,20 +239,18 @@ async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResul
       }
     }
 
-    // Prêmio (Lottoland retorna em centavos ou milhões)
+    // Prêmio
     let prize = `${lot.currency} —`
     if (last.jackpot) {
       const jp = Number(last.jackpot)
       if (jp > 0) {
-        // Lottoland retorna jackpot em milhões
-        prize = `${lot.currency} ${jp}.000.000`
+        prize = `${lot.currency} ${fmtNum(jp * 1_000_000)}`
       }
     }
     // Tenta pegar o prêmio real das odds
     if (last.odds?.rank1?.prize) {
       const p = last.odds.rank1.prize
       if (p > 0) {
-        // Valor em centavos
         prize = `${lot.currency} ${fmtNum(p / 100)}`
       }
     }
@@ -210,7 +259,7 @@ async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResul
     let nextPrize = ''
     if (data.next?.jackpot) {
       const nj = Number(data.next.jackpot)
-      if (nj > 0) nextPrize = `${lot.currency} ${nj}.000.000`
+      if (nj > 0) nextPrize = `${lot.currency} ${fmtNum(nj * 1_000_000)}`
     }
 
     // Próxima data
@@ -234,7 +283,8 @@ async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResul
       nextPrize,
       nextDate,
     }
-  } catch {
+  } catch (err) {
+    console.error(`    [${apiName}] Erro:`, err instanceof Error ? err.message : err)
     return null
   }
 }
@@ -274,7 +324,7 @@ export async function fetchAllResults(): Promise<LotteryResult[]> {
   // 3. Internacionais (Lottoland)
   console.log('🌍 Buscando loterias internacionais (Lottoland)...')
   const intPromises = LOTTOLAND_LOTTERIES.map(async (lot) => {
-    const result = await withTimeout(fetchLottolandLottery(lot), 15000)
+    const result = await withTimeout(fetchLottolandLottery(lot), 20000)
     if (result) {
       results.push(result)
       console.log(`  ✅ ${lot.name}: ${result.date} - ${result.prize}`)

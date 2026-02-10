@@ -1,17 +1,68 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { getLotteryBySlug } from '@/lib/lotteries'
 import NumberSelector from '@/components/NumberSelector'
 import CountdownTimer from '@/components/CountdownTimer'
 import ResultBalls from '@/components/ResultBalls'
 import Link from 'next/link'
-import { ArrowLeft, Info, Clock, Target } from 'lucide-react'
+import { ArrowLeft, Info, Clock, Loader2 } from 'lucide-react'
 import { useTranslation } from '@/contexts/LanguageContext'
+
+interface ResultData {
+  slug: string
+  name: string
+  country: string
+  numbers: number[]
+  extras: number[]
+  date: string
+  prize: string
+  concurso: string
+}
+
+interface JackpotData {
+  slug: string
+  jackpot: string
+  jackpotRaw?: number
+  source: 'api' | 'fallback'
+}
 
 export default function LotteryPage() {
   const { t } = useTranslation()
   const { slug } = useParams<{ slug: string }>()
   const lottery = getLotteryBySlug(slug)
+
+  const [lastResult, setLastResult] = useState<ResultData | null>(null)
+  const [realJackpot, setRealJackpot] = useState<string>('')
+  const [loadingResult, setLoadingResult] = useState(true)
+
+  // Buscar resultado real e jackpot real ao carregar a página
+  useEffect(() => {
+    if (!slug) return
+
+    // Buscar último resultado
+    fetch('/api/cron/results')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.results) {
+          const match = data.results.find((r: ResultData) => r.slug === slug)
+          if (match) setLastResult(match)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingResult(false))
+
+    // Buscar jackpot real
+    fetch('/api/jackpots')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.jackpots) {
+          const match = data.jackpots.find((j: JackpotData) => j.slug === slug)
+          if (match?.jackpot) setRealJackpot(match.jackpot)
+        }
+      })
+      .catch(() => {})
+  }, [slug])
 
   if (!lottery) {
     return (
@@ -26,6 +77,24 @@ export default function LotteryPage() {
   const nextDraw = new Date()
   nextDraw.setDate(nextDraw.getDate() + 2)
   nextDraw.setHours(20, 0, 0, 0)
+
+  // Usar jackpot real se disponível, senão fallback pro estático
+  const displayJackpot = realJackpot || lottery.jackpotStart
+
+  // Formatar data do resultado
+  const formatResultDate = (dateStr: string) => {
+    if (!dateStr) return '—'
+    try {
+      const date = new Date(dateStr + 'T12:00:00')
+      return date.toLocaleDateString('pt-BR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    } catch {
+      return dateStr
+    }
+  }
 
   return (
     <div className="animate-fade-in">
@@ -48,7 +117,7 @@ export default function LotteryPage() {
             </div>
             <div className="text-left md:text-right">
               <div className="text-white/60 text-[10px] font-semibold uppercase tracking-wider">{t.lotteryCard.estimatedJackpot}</div>
-              <div className="text-white font-black text-2xl md:text-3xl">{lottery.jackpotStart}</div>
+              <div className="text-white font-black text-2xl md:text-3xl">{displayJackpot}</div>
               <div className="mt-2">
                 <CountdownTimer targetDate={nextDraw.toISOString()} compact />
               </div>
@@ -100,21 +169,45 @@ export default function LotteryPage() {
               </div>
             </div>
 
-            {/* Last Results */}
+            {/* Last Results - DADOS REAIS DA API */}
             <div className="bg-dark-900/50 border border-white/5 rounded-2xl p-5">
               <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
                 <Clock size={16} className="text-orange-400" /> {t.lotteryPage.lastResults}
               </h3>
               <div className="space-y-4">
-                <div>
-                  <div className="text-dark-500 text-[10px] font-semibold mb-2">3 fev 2025</div>
-                  <ResultBalls
-                    numbers={lottery.slug === 'mega-sena' ? [10, 11, 22, 26, 36, 46] : [5, 11, 22, 25, 69]}
-                    extras={lottery.extraNumbers > 0 ? [21] : []}
-                    extraColor={lottery.extraColor}
-                    size="sm"
-                  />
-                </div>
+                {loadingResult ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-dark-500" />
+                  </div>
+                ) : lastResult ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-dark-500 text-[10px] font-semibold">
+                        {formatResultDate(lastResult.date)}
+                      </span>
+                      {lastResult.concurso && (
+                        <span className="text-dark-500 text-[10px] font-semibold">
+                          #{lastResult.concurso}
+                        </span>
+                      )}
+                    </div>
+                    <ResultBalls
+                      numbers={lastResult.numbers}
+                      extras={lastResult.extras.length > 0 ? lastResult.extras : (lottery.extraNumbers > 0 ? [] : [])}
+                      extraColor={lottery.extraColor}
+                      size="sm"
+                    />
+                    {lastResult.prize && (
+                      <p className="mt-2 text-emerald-400 text-xs font-semibold">
+                        {lastResult.prize}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-dark-500 text-xs text-center py-2">
+                    Nenhum resultado disponível
+                  </p>
+                )}
               </div>
               <Link href="/resultados" className="block mt-4 text-brand-400 hover:text-brand-300 text-xs font-semibold text-center">
                 {t.lotteryPage.viewAll} →

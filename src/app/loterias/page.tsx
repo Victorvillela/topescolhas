@@ -132,11 +132,14 @@ function LotteryGridCard({ data }: { data: LotteryCardData }) {
 
         {/* Draw days */}
         <div className="flex flex-wrap gap-1 mb-4">
-          {lottery.drawDays.map((day) => (
-            <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
-              {(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const)[day as number]}
-            </span>
-          ))}
+          {lottery.drawDays.map((day) => {
+            const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+            return (
+              <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
+                {DAY_NAMES[Number(day)] || day}
+              </span>
+            )
+          })}
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
             {lottery.drawTime}
           </span>
@@ -198,11 +201,14 @@ function FeaturedLotteryCard({ data }: { data: LotteryCardData }) {
         <div className="flex items-center gap-4 mb-4">
           <LiveCountdown targetDate={nextDraw} />
           <div className="flex gap-1">
-            {lottery.drawDays.map((day) => (
-              <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
-                {(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const)[day as number]}
-              </span>
-            ))}
+            {lottery.drawDays.map((day) => {
+              const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+              return (
+                <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
+                  {DAY_NAMES[Number(day)] || day}
+                </span>
+              )
+            })}
           </div>
         </div>
         <div className="flex items-center gap-2">

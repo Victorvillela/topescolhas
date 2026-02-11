@@ -5,6 +5,7 @@ import ResultBalls from '@/components/ResultBalls'
 import Link from 'next/link'
 import { useTranslation } from '@/contexts/LanguageContext'
 import { Loader2, RefreshCw } from 'lucide-react'
+import UpcomingDraws from '@/components/UpcomingDraws'
 
 interface ResultData {
   slug: string
@@ -16,10 +17,6 @@ interface ResultData {
   prize: string
   concurso: string
 }
-
-// ========================================
-// BANDEIRAS E GRADIENTES POR PAÍS/SLUG
-// ========================================
 
 const COUNTRY_FLAGS: Record<string, string> = {
   'Brasil': '🇧🇷',
@@ -135,7 +132,6 @@ export default function ResultadosPage() {
     return true
   })
 
-  // Ordena: brasileiras primeiro, depois internacionais
   const sorted = [...filtered].sort((a, b) => {
     if (a.country === 'Brasil' && b.country !== 'Brasil') return -1
     if (a.country !== 'Brasil' && b.country === 'Brasil') return 1
@@ -144,6 +140,10 @@ export default function ResultadosPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+
+      {/* 🔥 Carousel de Próximos Sorteios */}
+      <UpcomingDraws />
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">
@@ -207,7 +207,6 @@ export default function ResultadosPage() {
                   href={`/loterias/${result.slug}`}
                   className="block bg-gray-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform"
                 >
-                  {/* Header com gradiente */}
                   <div
                     className="px-4 py-3 flex items-center justify-between"
                     style={{ background: gradient }}
@@ -226,7 +225,6 @@ export default function ResultadosPage() {
                     )}
                   </div>
 
-                  {/* Corpo */}
                   <div className="p-4">
                     <p className="text-gray-500 text-xs mb-2">
                       {result.date ? new Date(result.date + 'T12:00:00').toLocaleDateString('pt-BR', {

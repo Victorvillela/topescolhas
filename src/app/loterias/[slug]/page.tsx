@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { getLotteryBySlug } from '@/lib/lotteries'
+import { getNextDraw } from '@/lib/utils'
 import NumberSelector from '@/components/NumberSelector'
 import CountdownTimer from '@/components/CountdownTimer'
 import ResultBalls from '@/components/ResultBalls'
@@ -40,7 +41,7 @@ export default function LotteryPage() {
   useEffect(() => {
     if (!slug) return
 
-    // Buscar último resultado
+    // Buscar último resultado (usa /api/results com cache — rápido)
     fetch('/api/results')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -74,9 +75,9 @@ export default function LotteryPage() {
   }
 
   const countryName = t.countries[lottery.country as keyof typeof t.countries] || lottery.country
-  const nextDraw = new Date()
-  nextDraw.setDate(nextDraw.getDate() + 2)
-  nextDraw.setHours(20, 0, 0, 0)
+
+  // Próximo sorteio real baseado nos dias e horário da loteria
+  const nextDraw = getNextDraw(lottery.drawDays, lottery.drawTime)
 
   // Usar jackpot real se disponível, senão fallback pro estático
   const displayJackpot = realJackpot || lottery.jackpotStart

@@ -2,8 +2,7 @@
 // SISTEMA DE RESULTADOS DE LOTERIAS
 // Fontes: guidi.dev.br, NY Open Data, Lottoland
 //
-// REMOVIDAS (API Lottoland não retorna dados):
-// - La Primitiva, El Gordo, Oz Lotto, Powerball AU, German Lotto
+// 20 loterias com dados reais confirmados
 // ==============================================
 
 export interface LotteryResult {
@@ -152,59 +151,52 @@ interface LottolandConfig {
   name: string
   country: string
   currency: string
-  hasExtras: boolean
-  extrasField: string
+  // Lista de campos onde procurar números extras (tenta em ordem)
+  // Suporta arrays [4, 5] e valores únicos (42)
+  extrasFields: string[]
 }
 
-// ⚠️ REMOVIDAS: La Primitiva, El Gordo, Oz Lotto, Powerball AU, German Lotto
-
+// ✅ Apenas loterias confirmadas com dados reais (testado 11/02/2026)
 const LOTTOLAND_LOTTERIES: LottolandConfig[] = [
   // 🇬🇧 Reino Unido
-  { slug: 'uk-lotto', api: 'ukLotto', name: 'UK Lotto', country: 'Reino Unido', currency: '£', hasExtras: true, extrasField: 'bonusBalls' },
+  { slug: 'uk-lotto', api: 'ukLotto', name: 'UK Lotto', country: 'Reino Unido', currency: '£',
+    extrasFields: ['bonusBalls', 'bonus'] },
 
   // 🇮🇪 Irlanda
-  { slug: 'irish-lotto', api: 'irishLotto', name: 'Irish Lotto', country: 'Irlanda', currency: '€', hasExtras: true, extrasField: 'bonusBalls' },
+  { slug: 'irish-lotto', api: 'irishLotto', name: 'Irish Lotto', country: 'Irlanda', currency: '€',
+    extrasFields: ['bonusBalls', 'bonus'] },
 
   // 🇪🇺 Europa
-  { slug: 'eurojackpot', api: 'euroJackpot', name: 'EuroJackpot', country: 'Europa', currency: '€', hasExtras: true, extrasField: 'euroNumbers' },
-  { slug: 'euromilhoes', api: 'euroMillions', name: 'EuroMilhões', country: 'Europa', currency: '€', hasExtras: true, extrasField: 'starNumbers' },
+  { slug: 'eurojackpot', api: 'euroJackpot', name: 'EuroJackpot', country: 'Europa', currency: '€',
+    extrasFields: ['euroNumbers', 'extras'] },
+  { slug: 'euromilhoes', api: 'euroMillions', name: 'EuroMilhões', country: 'Europa', currency: '€',
+    extrasFields: ['starNumbers', 'stars'] },
+  { slug: 'eurodreams', api: 'euroDreams', name: 'EuroDreams', country: 'Europa', currency: '€',
+    extrasFields: ['dream', 'extras', 'bonusBalls', 'bonus'] },
 
-  // 🇫🇷 França
-  { slug: 'france-loto', api: 'frenchLoto', name: 'Loto', country: 'França', currency: '€', hasExtras: true, extrasField: 'bonusBalls' },
+  // 🇩🇪 Alemanha — superzahl é número único (0-9)
+  { slug: 'german-lotto', api: 'german6aus49', name: 'German Lotto 6aus49', country: 'Alemanha', currency: '€',
+    extrasFields: ['superzahl', 'superZahl', 'bonus'] },
 
-  // 🇮🇹 Itália
-  { slug: 'superenalotto', api: 'superEnalotto', name: 'SuperEnalotto', country: 'Itália', currency: '€', hasExtras: true, extrasField: 'jolly' },
+  // 🇫🇷 França — chance é número único (1-10)
+  { slug: 'france-loto', api: 'frenchLotto', name: 'Loto', country: 'França', currency: '€',
+    extrasFields: ['chance', 'bonusBalls', 'bonus'] },
 
-  // 🇪🇸 Espanha
-  { slug: 'bonoloto', api: 'bonoloto', name: 'BonoLoto', country: 'Espanha', currency: '€', hasExtras: true, extrasField: 'complementario' },
+  // 🇨🇭 Suíça — luckyNumber é número único (1-6)
+  { slug: 'swiss-lotto', api: 'swissLotto', name: 'Swiss Lotto', country: 'Suíça', currency: 'CHF',
+    extrasFields: ['luckyNumber', 'lucky', 'bonus'] },
 
-  // 🇦🇺 Austrália
-  { slug: 'saturday-lotto', api: 'saturdayLotto', name: 'Saturday Lotto', country: 'Austrália', currency: 'A$', hasExtras: true, extrasField: 'bonusBalls' },
+  // 🇮🇹 Itália — jolly é número único
+  { slug: 'superenalotto', api: 'superEnalotto', name: 'SuperEnalotto', country: 'Itália', currency: '€',
+    extrasFields: ['jolly', 'bonusBalls'] },
 
-  // 🇦🇹 Áustria
-  { slug: 'austria-lotto', api: 'austriaLotto', name: 'Austria Lotto', country: 'Áustria', currency: '€', hasExtras: false, extrasField: '' },
+  // 🇦🇹 Áustria — Zusatzzahl é número único
+  { slug: 'austria-lotto', api: 'austriaLotto', name: 'Austria Lotto', country: 'Áustria', currency: '€',
+    extrasFields: ['Zusatzzahl', 'zusatzzahl', 'bonus'] },
 
-  // 🇵🇱 Polônia — slug alinhado com lotteries.ts
-  { slug: 'pl-lotto', api: 'polishLotto', name: 'Polish Lotto', country: 'Polônia', currency: 'zł', hasExtras: false, extrasField: '' },
-
-  // 🇵🇹 Portugal
-  { slug: 'totoloto', api: 'totoloto', name: 'Totoloto', country: 'Portugal', currency: '€', hasExtras: false, extrasField: '' },
-
-  // 🇨🇦 Canadá
-  { slug: 'lotto-649', api: 'lotto649', name: 'Lotto 6/49', country: 'Canadá', currency: 'C$', hasExtras: false, extrasField: '' },
-
-  // 🇿🇦 África do Sul — slugs alinhados com lotteries.ts
-  { slug: 'za-lotto', api: 'saLotto', name: 'SA Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
-  { slug: 'za-powerball', api: 'saPowerball', name: 'SA Powerball', country: 'África do Sul', currency: 'R', hasExtras: true, extrasField: 'bonusBalls' },
-  { slug: 'za-dailylotto', api: 'saDailyLotto', name: 'SA Daily Lotto', country: 'África do Sul', currency: 'R', hasExtras: false, extrasField: '' },
-
-  // 🇭🇺 Hungria
-  { slug: 'hatoslotto', api: 'hatoslotto', name: 'HatosLottó', country: 'Hungria', currency: 'Ft', hasExtras: false, extrasField: '' },
-  { slug: 'otoslotto', api: 'otoslotto', name: 'ÖtösLottó', country: 'Hungria', currency: 'Ft', hasExtras: false, extrasField: '' },
-
-  // 🇵🇭 Filipinas — slugs alinhados com lotteries.ts
-  { slug: 'ph-ultralotto', api: 'phUltraLotto', name: 'Ultra Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
-  { slug: 'ph-grandlotto', api: 'phGrandLotto', name: 'Grand Lotto', country: 'Filipinas', currency: '₱', hasExtras: false, extrasField: '' },
+  // 🇵🇱 Polônia — sem extras
+  { slug: 'pl-lotto', api: 'polishLotto', name: 'Polish Lotto', country: 'Polônia', currency: 'zł',
+    extrasFields: [] },
 ]
 
 async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResult | null> {
@@ -226,10 +218,21 @@ async function fetchLottolandLottery(lot: LottolandConfig): Promise<LotteryResul
     const numbers = (last.numbers || []).map((n: number) => n).sort((a: number, b: number) => a - b)
     if (numbers.length === 0) return null
 
-    // Números extras (EuroJackpot = euroNumbers, EuroMillions = starNumbers)
+    // Números extras — tenta cada campo em extrasFields
+    // Suporta arrays [4, 5] e valores únicos (42, "7")
     let extras: number[] = []
-    if (lot.hasExtras && lot.extrasField && last[lot.extrasField]) {
-      extras = last[lot.extrasField].map((n: number) => n)
+    for (const field of lot.extrasFields) {
+      const val = last[field]
+      if (val !== undefined && val !== null) {
+        if (Array.isArray(val) && val.length > 0) {
+          extras = val.map((n: number) => Number(n))
+        } else if (typeof val === 'number') {
+          extras = [val]
+        } else if (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) {
+          extras = [Number(val)]
+        }
+        if (extras.length > 0) break
+      }
     }
 
     // Data
@@ -294,13 +297,13 @@ export async function fetchAllResults(): Promise<LotteryResult[]> {
     }
   } catch (err) { console.error('  ❌ US:', err) }
 
-  // 3. Internacionais (Lottoland)
+  // 3. Internacionais (Lottoland) — 11 loterias confirmadas
   console.log('🌍 Buscando loterias internacionais (Lottoland)...')
   const intPromises = LOTTOLAND_LOTTERIES.map(async (lot) => {
     const result = await withTimeout(fetchLottolandLottery(lot), 15000)
     if (result) {
       results.push(result)
-      console.log(`  ✅ ${lot.name}: ${result.date} - ${result.prize}`)
+      console.log(`  ✅ ${lot.name}: ${result.date} [${result.numbers}] extras:[${result.extras}] - ${result.prize}`)
     } else {
       errors.push(lot.name)
       console.log(`  ❌ ${lot.name}`)

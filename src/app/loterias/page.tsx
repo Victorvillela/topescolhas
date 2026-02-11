@@ -134,7 +134,7 @@ function LotteryGridCard({ data }: { data: LotteryCardData }) {
         <div className="flex flex-wrap gap-1 mb-4">
           {lottery.drawDays.map((day) => (
             <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][day]}
+              {(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const)[day as number]}
             </span>
           ))}
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
@@ -200,7 +200,7 @@ function FeaturedLotteryCard({ data }: { data: LotteryCardData }) {
           <div className="flex gap-1">
             {lottery.drawDays.map((day) => (
               <span key={day} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][day]}
+                {(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const)[day as number]}
               </span>
             ))}
           </div>

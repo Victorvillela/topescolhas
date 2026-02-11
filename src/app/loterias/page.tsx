@@ -286,7 +286,7 @@ export default function LoteriasPage() {
   const regionConfig = REGIONS.find(r => r.id === region)
   const filtered = region === 'all'
     ? cards
-    : cards.filter(c => regionConfig?.countries.includes(c.lottery.country))
+    : cards.filter(c => (regionConfig?.countries as readonly string[])?.includes(c.lottery.country))
 
   // Ordenar
   const sorted = [...filtered].sort((a, b) => {

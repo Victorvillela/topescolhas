@@ -4,7 +4,7 @@ import { LOTTERIES } from '@/lib/lotteries'
 import ResultBalls from '@/components/ResultBalls'
 import Link from 'next/link'
 import { useTranslation } from '@/contexts/LanguageContext'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw, Globe, Trophy, TrendingUp } from 'lucide-react'
 import UpcomingDraws from '@/components/UpcomingDraws'
 
 interface ResultData {
@@ -59,9 +59,9 @@ const SLUG_GRADIENTS: Record<string, string> = {
   'irish-lotto': 'linear-gradient(135deg, #16a34a, #15803d)',
   'austria-lotto': 'linear-gradient(135deg, #ef4444, #dc2626)',
   'pl-lotto': 'linear-gradient(135deg, #dc2626, #991b1b)',
-  'german-lotto': 'linear-gradient(135deg, #dc2626, #991b1b)',
-  'swiss-lotto': 'linear-gradient(135deg, #dc2626, #ef4444)',
-  'eurodreams': 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+  'german-lotto': 'linear-gradient(135deg, #dc2626, #f59e0b)',
+  'eurodreams': 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+  'swiss-lotto': 'linear-gradient(135deg, #dc2626, #dc2626)',
 }
 
 const COUNTRY_GRADIENTS: Record<string, string> = {
@@ -76,9 +76,12 @@ const COUNTRY_GRADIENTS: Record<string, string> = {
   'Canadá': 'linear-gradient(135deg, #dc2626, #991b1b)',
   'África do Sul': 'linear-gradient(135deg, #f59e0b, #d97706)',
   'Polônia': 'linear-gradient(135deg, #dc2626, #991b1b)',
+  'Hungria': 'linear-gradient(135deg, #dc2626, #059669)',
+  'Filipinas': 'linear-gradient(135deg, #2563eb, #1d4ed8)',
   'Áustria': 'linear-gradient(135deg, #ef4444, #dc2626)',
-  'Alemanha': 'linear-gradient(135deg, #dc2626, #991b1b)',
-  'Suíça': 'linear-gradient(135deg, #dc2626, #ef4444)',
+  'Romênia': 'linear-gradient(135deg, #2563eb, #f59e0b)',
+  'Alemanha': 'linear-gradient(135deg, #dc2626, #f59e0b)',
+  'Suíça': 'linear-gradient(135deg, #dc2626, #dc2626)',
 }
 
 function getGradient(slug: string, country: string): string {
@@ -115,7 +118,7 @@ export default function LoteriasPage() {
       if (!res.ok) throw new Error('Erro ao buscar resultados')
       const data = await res.json()
       setResults(data.results || [])
-    } catch (err) {
+    } catch {
       setError('Erro ao carregar resultados. Tente novamente.')
     } finally {
       setLoading(false)
@@ -137,14 +140,12 @@ export default function LoteriasPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
-      {/* ========================================= */}
-      {/* HERO BANNER - Frase da home              */}
-      {/* ========================================= */}
+      {/* ========== HERO BANNER ========== */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gray-950" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 rounded-full blur-[120px]" />
 
-        <div className="relative max-w-7xl mx-auto px-4 pt-12 pb-6 md:pt-16 md:pb-8 text-center">
+        <div className="relative max-w-7xl mx-auto px-4 py-14 md:py-20 text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/5 mb-6">
             <span className="text-sm">🏆</span>
@@ -152,7 +153,7 @@ export default function LoteriasPage() {
           </div>
 
           {/* Título */}
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-5">
             Jogue nas{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
               Maiores Loterias
@@ -162,7 +163,7 @@ export default function LoteriasPage() {
           </h1>
 
           {/* Subtítulo */}
-          <p className="text-gray-400 text-sm md:text-lg max-w-2xl mx-auto leading-relaxed mb-6">
+          <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
             Escolha seus números da sorte, compre online e concorra a prêmios milionários. É fácil, seguro e rápido.
           </p>
 
@@ -174,17 +175,35 @@ export default function LoteriasPage() {
             Cadastre-se e Ganhe Bônus
             <span className="text-xl">🎁</span>
           </Link>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-6 mt-10">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm text-gray-400">
+                <span className="text-white font-bold">{LOTTERIES.length}</span> loterias
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-gray-400">
+                <span className="text-white font-bold">{new Set(LOTTERIES.map(l => l.country)).size}</span> países
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-sm text-gray-400">
+                Jackpots <span className="text-green-400 font-bold">ao vivo</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ========================================= */}
-      {/* CAROUSEL - Próximos Sorteios              */}
-      {/* ========================================= */}
+      {/* ========== CAROUSEL PRÓXIMOS SORTEIOS ========== */}
       <UpcomingDraws />
 
-      {/* ========================================= */}
-      {/* RESULTADOS - Grid de últimos resultados   */}
-      {/* ========================================= */}
+      {/* ========== RESULTADOS ========== */}
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold">
@@ -196,7 +215,7 @@ export default function LoteriasPage() {
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {t.results?.refresh || 'Atualizar'}
+            Atualizar
           </button>
         </div>
 
@@ -222,7 +241,7 @@ export default function LoteriasPage() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-            <span className="ml-3 text-gray-400">{t.results?.loading || 'Carregando resultados...'}</span>
+            <span className="ml-3 text-gray-400">Carregando resultados...</span>
           </div>
         )}
 
@@ -230,7 +249,7 @@ export default function LoteriasPage() {
           <div className="text-center py-20 text-red-400">
             <p>{error}</p>
             <button onClick={fetchResults} className="mt-4 px-6 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700">
-              {t.results?.tryAgain || 'Tentar novamente'}
+              Tentar novamente
             </button>
           </div>
         )}
@@ -295,7 +314,7 @@ export default function LoteriasPage() {
 
         {!loading && !error && sorted.length === 0 && (
           <div className="text-center py-20 text-gray-500">
-            <p>{t.results?.noResults || 'Nenhum resultado encontrado.'}</p>
+            <p>Nenhum resultado encontrado.</p>
           </div>
         )}
       </div>

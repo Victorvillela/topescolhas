@@ -141,6 +141,44 @@ export default function ResultadosPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
+      {/* ========== HERO BANNER ========== */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gray-950" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 rounded-full blur-[120px]" />
+
+        <div className="relative max-w-7xl mx-auto px-4 py-14 md:py-20 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/5 mb-6">
+            <span className="text-sm">🏆</span>
+            <span className="text-xs font-bold tracking-widest text-amber-400 uppercase">Maiores Jackpots do Mundo</span>
+          </div>
+
+          {/* Título */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-5">
+            Jogue nas{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
+              Maiores Loterias
+            </span>
+            <br />
+            do Brasil e do Mundo
+          </h1>
+
+          {/* Subtítulo */}
+          <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+            Escolha seus números da sorte, compre online e concorra a prêmios milionários. É fácil, seguro e rápido.
+          </p>
+
+          {/* CTA */}
+          <Link
+            href="/auth/register"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-gray-900 font-bold text-lg hover:from-amber-300 hover:to-amber-400 transition-all duration-300 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-105"
+          >
+            Cadastre-se e Ganhe Bônus
+            <span className="text-xl">🎁</span>
+          </Link>
+        </div>
+      </div>
+
       {/* 🔥 Carousel de Próximos Sorteios */}
       <UpcomingDraws />
 

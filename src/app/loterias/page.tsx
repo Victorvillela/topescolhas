@@ -311,40 +311,60 @@ export default function LoteriasPage() {
 
       {/* Hero Banner */}
       <div className="relative overflow-hidden">
-        {/* Background com gradiente */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-gray-950 to-gray-950" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(99,102,241,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(245,158,11,0.08),transparent_60%)]" />
+        {/* Background com gradiente e glow */}
+        <div className="absolute inset-0 bg-gray-950" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 rounded-full blur-[120px]" />
 
-        <div className="relative max-w-7xl mx-auto px-4 py-12 md:py-16">
-          <div className="max-w-2xl">
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-3">
-              🎰 Loterias Internacionais
-            </h1>
-            <p className="text-gray-400 text-base md:text-lg leading-relaxed">
-              Jogue nas maiores loterias do mundo. Resultados em tempo real, jackpots atualizados e sorteios de {LOTTERIES.length} loterias.
-            </p>
+        <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-20 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/5 mb-6">
+            <span className="text-sm">🏆</span>
+            <span className="text-xs font-bold tracking-widest text-amber-400 uppercase">Maiores Jackpots do Mundo</span>
+          </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap gap-6 mt-6">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-indigo-400" />
-                <span className="text-sm text-gray-400">
-                  <span className="text-white font-bold">{LOTTERIES.length}</span> loterias
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                <span className="text-sm text-gray-400">
-                  <span className="text-white font-bold">{new Set(LOTTERIES.map(l => l.country)).size}</span> países
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-gray-400">
-                  Jackpots <span className="text-green-400 font-bold">ao vivo</span>
-                </span>
-              </div>
+          {/* Título principal */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-5">
+            Jogue nas{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
+              Maiores Loterias
+            </span>
+            <br />
+            do Brasil e do Mundo
+          </h1>
+
+          {/* Subtítulo */}
+          <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+            Escolha seus números da sorte, compre online e concorra a prêmios milionários. É fácil, seguro e rápido.
+          </p>
+
+          {/* CTA */}
+          <Link
+            href="/auth/register"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-gray-900 font-bold text-lg hover:from-amber-300 hover:to-amber-400 transition-all duration-300 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-105"
+          >
+            Cadastre-se e Ganhe Bônus
+            <span className="text-xl">🎁</span>
+          </Link>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-6 mt-10">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm text-gray-400">
+                <span className="text-white font-bold">{LOTTERIES.length}</span> loterias
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-gray-400">
+                <span className="text-white font-bold">{new Set(LOTTERIES.map(l => l.country)).size}</span> países
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-sm text-gray-400">
+                Jackpots <span className="text-green-400 font-bold">ao vivo</span>
+              </span>
             </div>
           </div>
         </div>
